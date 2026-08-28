@@ -28,7 +28,7 @@
     "govuk-frontend": "^6.5.0",
     "nunjucks": "^3.2.4",
     "sass": "^1.0.0",
-    "typescript": "^7.0.2",
+    "typescript": "6.0.3",
     "zod": "^4.0.0"
   },
   "devDependencies": {
