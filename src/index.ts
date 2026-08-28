@@ -1,4 +1,8 @@
+// Vercel's Express framework detector requires the entry point to import Express directly.
+import express from "express";
 import { createApp } from "./create-app.js";
+
+void express;
 
 try {
   process.loadEnvFile();
