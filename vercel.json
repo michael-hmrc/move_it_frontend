@@ -5,5 +5,16 @@
     "src/index.ts": {
       "includeFiles": "{views,node_modules/govuk-frontend/dist}/**/*"
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/styles/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ]
 }

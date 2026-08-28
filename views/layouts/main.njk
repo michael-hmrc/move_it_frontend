@@ -9,7 +9,7 @@
 {% block pageTitle %}{{ pageTitle | default("Move It") }}{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="/styles/application.css">
+  <link rel="stylesheet" href="/styles/application.css?v={{ assetVersion }}">
 {% endblock %}
 
 {# Move It is not GOV.UK branded, so do not load GOV.UK identity assets. #}
@@ -29,6 +29,7 @@
       </a>
       <a class="app-header__service-name" href="/">Move It</a>
     </div>
+    <div class="app-header__brand-stripe" aria-hidden="true"></div>
   </header>
 
   {% set accountLinks %}

@@ -7,9 +7,15 @@
 
 .app-header {
   background: #c8ff02;
-  border-bottom: 5px solid #6e4ba2;
   color: #1e2356;
   position: relative;
+}
+
+.app-header__brand-stripe {
+  background: #6e4ba2;
+  display: block;
+  height: 8px;
+  width: 100%;
 }
 
 .app-header__container {

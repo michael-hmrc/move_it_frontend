@@ -33,6 +33,8 @@ describe("Move It application", () => {
     expect(response.text).toContain("What is your display name?");
     expect(response.text).toContain('src="/images/opencast-logo.png"');
     expect(response.text).toContain('alt="Opencast"');
+    expect(response.text).toContain('class="app-header__brand-stripe"');
+    expect(response.text).toContain('/styles/application.css?v=');
     expect(response.text).toContain("How it works");
     expect(response.text).toContain('autocomplete="nickname"');
     expect(response.text).toContain('maxlength="40"');
@@ -45,7 +47,9 @@ describe("Move It application", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers["cache-control"]).toContain("max-age=0");
-    expect(response.text).toContain("border-bottom:5px solid #6e4ba2");
+    expect(response.text).toContain(".app-header__brand-stripe");
+    expect(response.text).toContain("background:#6e4ba2");
+    expect(response.text).toContain("height:8px");
   });
 
   it("validates the display name before continuing", async () => {

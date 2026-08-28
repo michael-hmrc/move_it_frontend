@@ -104,6 +104,9 @@ export function createApp(
   app.set("trust proxy", 1);
   app.set("view engine", "njk");
   app.set("views", path.join(projectRoot, "views"));
+  app.locals.assetVersion = process.env.VERCEL_DEPLOYMENT_ID
+    ?? process.env.VERCEL_GIT_COMMIT_SHA
+    ?? Date.now().toString(36);
   app.use(express.urlencoded({ extended: false }));
   app.use(
     cookieSession({
