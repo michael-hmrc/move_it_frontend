@@ -6,7 +6,7 @@ import express, {
 } from "express";
 import nunjucks from "nunjucks";
 import path from "node:path";
-import { z, type ZodError } from "zod";
+import type { ZodError } from "zod";
 import {
   activities,
   getActivity,
@@ -21,39 +21,16 @@ import {
   type ConversionResult
 } from "./domain/conversion.js";
 import {
+  activitySchema,
+  displayNameSchema,
+  durationSchema,
+  intensitySchema
+} from "./domain/validation.js";
+import {
   createConversionRepository,
+  sampleScoreboardEntries,
   type ConversionRepository
 } from "./persistence/conversion-repository.js";
-
-const displayNameSchema = z.object({
-  displayName: z
-    .string({ error: "Enter a display name" })
-    .trim()
-    .min(2, "Display name must be at least 2 characters")
-    .max(40, "Display name must be 40 characters or fewer")
-});
-
-const activitySchema = z.object({
-  activity: z.preprocess(
-    (value) => value ?? "",
-    z.string().refine(isActivityId, "Select an activity")
-  )
-});
-
-const intensitySchema = z.object({
-  intensity: z.preprocess(
-    (value) => value ?? "",
-    z.string().refine(isIntensity, "Select an intensity")
-  )
-});
-
-const durationSchema = z.object({
-  durationMinutes: z.coerce
-    .number({ error: "Enter the duration in minutes" })
-    .int("Duration must be a whole number")
-    .min(1, "Duration must be at least 1 minute")
-    .max(1440, "Duration must be 1,440 minutes or less")
-});
 
 interface JourneySession {
   displayName?: string;
@@ -334,8 +311,10 @@ export function createApp(
     }).format(now);
 
     try {
-      const entries = await repository.listMonthly(monthStart);
-      return response.render("scoreboard", { entries, monthLabel });
+      const storedEntries = await repository.listMonthly(monthStart);
+      const isDemoData = storedEntries.length === 0;
+      const entries = isDemoData ? sampleScoreboardEntries : storedEntries;
+      return response.render("scoreboard", { entries, isDemoData, monthLabel });
     } catch (error) {
       return next(error);
     }

@@ -16,10 +16,11 @@ describe("Move It application", () => {
     const response = await request(createApp()).get("/");
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain("Convert an activity");
+    expect(response.text).toContain("Submit an activity");
     expect(response.text).toContain("View the monthly scoreboard");
     expect(response.text).toContain("View one-hour conversions");
     expect(response.text).toContain("Learn how Move It works");
+    expect(response.text).toContain("Submit activity");
     expect(response.text).toContain('href="/login"');
     expect(response.text).toContain(">Account</a>");
     expect(response.text).toContain('aria-current="page"');
@@ -33,6 +34,8 @@ describe("Move It application", () => {
     expect(response.text).toContain('src="/images/opencast-logo.png"');
     expect(response.text).toContain('alt="Opencast"');
     expect(response.text).toContain("How it works");
+    expect(response.text).toContain('autocomplete="nickname"');
+    expect(response.text).toContain('maxlength="40"');
     expect(response.text).not.toContain("What activity did you do?");
     expect(response.text).not.toContain("Crown copyright");
   });
@@ -46,6 +49,61 @@ describe("Move It application", () => {
     expect(response.status).toBe(400);
     expect(response.text).toContain("There is a problem");
     expect(response.text).toContain("Display name must be at least 2 characters");
+  });
+
+  it("requires a meaningful display name", async () => {
+    const response = await request(createApp())
+      .post("/convert/name")
+      .type("form")
+      .send({ displayName: "--" });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain("Display name must include a letter or number");
+  });
+
+  it("validates activity, intensity and duration values", async () => {
+    const agent = request.agent(createApp());
+
+    await agent.post("/convert/name").type("form").send({ displayName: "Alex" });
+
+    const invalidActivity = await agent
+      .post("/convert/activity")
+      .type("form")
+      .send({ activity: "not-an-activity" });
+    expect(invalidActivity.status).toBe(400);
+    expect(invalidActivity.text).toContain("Select an activity");
+
+    await agent.post("/convert/activity").type("form").send({ activity: "football" });
+
+    const invalidIntensity = await agent
+      .post("/convert/intensity")
+      .type("form")
+      .send({ intensity: "extreme" });
+    expect(invalidIntensity.status).toBe(400);
+    expect(invalidIntensity.text).toContain("Select an intensity");
+
+    await agent.post("/convert/intensity").type("form").send({ intensity: "moderate" });
+
+    const blankDuration = await agent
+      .post("/convert/duration")
+      .type("form")
+      .send({ durationMinutes: "" });
+    expect(blankDuration.status).toBe(400);
+    expect(blankDuration.text).toContain("Enter the duration in minutes");
+
+    const decimalDuration = await agent
+      .post("/convert/duration")
+      .type("form")
+      .send({ durationMinutes: "12.5" });
+    expect(decimalDuration.status).toBe(400);
+    expect(decimalDuration.text).toContain("Duration must be a whole number");
+
+    const excessiveDuration = await agent
+      .post("/convert/duration")
+      .type("form")
+      .send({ durationMinutes: "1441" });
+    expect(excessiveDuration.status).toBe(400);
+    expect(excessiveDuration.text).toContain("Duration must be 1,440 minutes or less");
   });
 
   it("completes the multi-page journey and persists the result", async () => {
@@ -79,6 +137,9 @@ describe("Move It application", () => {
 
     const durationPage = await agent.get("/convert/duration");
     expect(durationPage.text).toContain("How long did the activity last?");
+    expect(durationPage.text).toContain('inputmode="numeric"');
+    expect(durationPage.text).toContain('maxlength="4"');
+    expect(durationPage.text).toContain('pattern="[0-9]*"');
 
     const durationResponse = await agent
       .post("/convert/duration")
@@ -121,6 +182,16 @@ describe("Move It application", () => {
     expect(response.text).toContain("Monthly scoreboard");
     expect(response.text).toContain("Morgan");
     expect(response.text).toContain("8400");
+    expect(response.text).not.toContain("This is sample data");
+  });
+
+  it("renders labelled sample scoreboard data when there are no saved entries", async () => {
+    const response = await request(createApp()).get("/scoreboard");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("This is sample data");
+    expect(response.text).toContain("Alex");
+    expect(response.text).toContain("48250");
   });
 
   it("renders an explanation page from the service navigation", async () => {
@@ -138,6 +209,10 @@ describe("Move It application", () => {
     expect(response.status).toBe(200);
     expect(response.text).toContain("One-hour activity conversion guide");
     expect(response.text).toContain("Cycling");
+    expect(response.text).toContain("Football");
+    expect(response.text).toContain("Running");
+    expect(response.text).toContain("Strength training");
+    expect(response.text).toContain("Walking");
     expect(response.text).toContain("9000");
     expect(response.text).toContain("12000");
     expect(response.text).toContain('aria-current="page"');

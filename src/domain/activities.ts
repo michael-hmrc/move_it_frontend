@@ -1,8 +1,43 @@
 export const activities = [
   {
+    id: "badminton",
+    name: "Badminton",
+    stepsPerMinute: { light: 90, moderate: 135, vigorous: 180 }
+  },
+  {
     id: "cycling",
     name: "Cycling",
     stepsPerMinute: { light: 100, moderate: 150, vigorous: 200 }
+  },
+  {
+    id: "dancing",
+    name: "Dancing",
+    stepsPerMinute: { light: 70, moderate: 110, vigorous: 160 }
+  },
+  {
+    id: "football",
+    name: "Football",
+    stepsPerMinute: { light: 100, moderate: 150, vigorous: 200 }
+  },
+  {
+    id: "hiking",
+    name: "Hiking",
+    stepsPerMinute: { light: 90, moderate: 130, vigorous: 170 }
+  },
+  {
+    id: "rowing",
+    name: "Rowing",
+    stepsPerMinute: { light: 100, moderate: 150, vigorous: 200 }
+  },
+  {
+    id: "running",
+    name: "Running",
+    stepsPerMinute: { light: 130, moderate: 180, vigorous: 230 }
+  },
+  {
+    id: "strength-training",
+    name: "Strength training",
+    stepsPerMinute: { light: 50, moderate: 80, vigorous: 120 }
   },
   {
     id: "swimming",
@@ -10,9 +45,14 @@ export const activities = [
     stepsPerMinute: { light: 110, moderate: 160, vigorous: 210 }
   },
   {
-    id: "rowing",
-    name: "Rowing",
-    stepsPerMinute: { light: 100, moderate: 150, vigorous: 200 }
+    id: "tennis",
+    name: "Tennis",
+    stepsPerMinute: { light: 90, moderate: 140, vigorous: 190 }
+  },
+  {
+    id: "walking",
+    name: "Walking",
+    stepsPerMinute: { light: 80, moderate: 110, vigorous: 140 }
   },
   {
     id: "yoga",

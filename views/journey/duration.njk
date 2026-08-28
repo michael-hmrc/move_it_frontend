@@ -24,6 +24,10 @@
           classes: "govuk-input--width-4",
           inputmode: "numeric",
           spellcheck: false,
+          attributes: {
+            maxlength: "4",
+            pattern: "[0-9]*"
+          },
           label: {
             text: "How long did the activity last?",
             classes: "govuk-label--xl",
