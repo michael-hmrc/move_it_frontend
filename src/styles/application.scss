@@ -153,6 +153,22 @@
   padding-top: govuk-spacing(6);
 }
 
+.app-footer__brand {
+  align-items: center;
+  display: flex;
+  gap: govuk-spacing(2);
+}
+
+.app-footer__logo {
+  display: block;
+  height: auto;
+  width: 105px;
+}
+
+.app-footer__logo-link:focus {
+  @include govuk-focused-text;
+}
+
 .app-footer li {
   display: inline-block;
   margin-right: govuk-spacing(4);

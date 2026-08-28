@@ -35,6 +35,9 @@ describe("Move It application", () => {
     expect(response.text).toContain('alt="Opencast"');
     expect(response.text).toContain('class="app-header__brand-stripe"');
     expect(response.text).toContain('/styles/application.css?v=');
+    expect(response.text).toContain("Move It by");
+    expect(response.text).toContain('class="app-footer__logo-link" href="/"');
+    expect(response.text).toContain('class="app-footer__logo"');
     expect(response.text).toContain("How it works");
     expect(response.text).toContain('autocomplete="nickname"');
     expect(response.text).toContain('maxlength="40"');

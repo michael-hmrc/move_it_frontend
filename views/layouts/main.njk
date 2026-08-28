@@ -86,7 +86,18 @@
 {% block footer %}
   <footer class="app-footer">
     <div class="govuk-width-container app-footer__container">
-      <p class="govuk-body-s govuk-!-margin-bottom-0">Move It by Opencast</p>
+      <p class="govuk-body-s govuk-!-margin-bottom-0 app-footer__brand">
+        <span>Move It by</span>
+        <a class="app-footer__logo-link" href="/" aria-label="Move It homepage">
+          <img
+            class="app-footer__logo"
+            src="/images/opencast-logo.png"
+            width="105"
+            height="22"
+            alt="Opencast"
+          >
+        </a>
+      </p>
     </div>
   </footer>
 {% endblock %}
