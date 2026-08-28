@@ -1,0 +1,38 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% set pageTitle = ("Error: " if errors else "") + "What is your display name? - Move It" %}
+
+{% block beforeContent %}{{ govukBackLink({ href: "/", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds app-question-page">
+      {% if errors %}
+        {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
+      {% endif %}
+
+      <form action="/convert/name" method="post" novalidate>
+        {{ govukInput({
+          id: "displayName",
+          name: "displayName",
+          value: values.displayName,
+          classes: "govuk-input--width-20",
+          label: {
+            text: "What is your display name?",
+            classes: "govuk-label--xl",
+            isPageHeading: true
+          },
+          hint: { text: "This name will appear on the public monthly scoreboard." },
+          errorMessage: { text: errorMessage } if errorMessage
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% set pageTitle = "Your estimated steps - Move It" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {{ govukPanel({
+        titleText: "Your estimated step equivalent",
+        html: '<strong class="govuk-heading-xl govuk-!-margin-bottom-0">' + (result.estimatedSteps | string) + ' steps</strong>'
+      }) }}
+
+      {{ govukSummaryList({
+        rows: [
+          { key: { text: "Display name" }, value: { text: result.displayName } },
+          { key: { text: "Activity" }, value: { text: result.activityName } },
+          { key: { text: "Intensity" }, value: { text: result.intensity | capitalize } },
+          { key: { text: "Duration" }, value: { text: result.durationMinutes + " minutes" } }
+        ]
+      }) }}
+
+      <p class="govuk-body">This is an illustrative estimate. Step equivalents vary between people and devices.</p>
+      <p class="govuk-body"><a class="govuk-link" href="/convert/reset">Calculate another activity</a></p>
+      <p class="govuk-body"><a class="govuk-link" href="/scoreboard">View the monthly scoreboard</a></p>
+    </div>
+  </div>
+{% endblock %}

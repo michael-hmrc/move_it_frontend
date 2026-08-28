@@ -1,0 +1,38 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageTitle = "How Move It works" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">How Move It works</h1>
+
+      <p class="govuk-body-l">Move It converts exercise activities into an estimated number of steps.</p>
+
+      <h2 class="govuk-heading-m">What you will need</h2>
+      <p class="govuk-body">You will be asked for:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>a public display name</li>
+        <li>the activity you completed</li>
+        <li>the intensity of the activity</li>
+        <li>the duration in minutes</li>
+      </ul>
+
+      {{ govukInsetText({
+        text: "Step equivalents are illustrative estimates and are not medical measurements."
+      }) }}
+
+      <h2 class="govuk-heading-m">Monthly scoreboard</h2>
+      <p class="govuk-body">Completed activities are added to the current month's scoreboard. It ranks display names by their total estimated steps.</p>
+
+      {{ govukButton({
+        text: "Convert an activity",
+        href: "/convert/reset",
+        isStartButton: true
+      }) }}
+    </div>
+  </div>
+{% endblock %}

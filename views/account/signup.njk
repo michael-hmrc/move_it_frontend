@@ -1,0 +1,17 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageTitle = "Sign up - Move It" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Sign up</h1>
+      {{ govukInsetText({ text: "Account registration is not available in this prototype yet." }) }}
+      <p class="govuk-body">A future version can use Supabase Auth to create accounts and associate conversions with verified users.</p>
+      <p class="govuk-body"><a class="govuk-link" href="/login">Log in instead</a></p>
+      <p class="govuk-body"><a class="govuk-link" href="/">Return to the homepage</a></p>
+    </div>
+  </div>
+{% endblock %}

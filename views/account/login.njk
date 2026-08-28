@@ -1,0 +1,20 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageTitle = "Account - Move It" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Account</h1>
+      {{ govukInsetText({ text: "This prototype uses a mock account and does not collect credentials." }) }}
+      <p class="govuk-body">Continue as the demo user to preview how a signed-in account will appear in the service navigation.</p>
+      <form action="/login" method="post">
+        {{ govukButton({ text: "Continue as Demo user" }) }}
+      </form>
+      <p class="govuk-body"><a class="govuk-link" href="/">Return to the homepage</a></p>
+    </div>
+  </div>
+{% endblock %}

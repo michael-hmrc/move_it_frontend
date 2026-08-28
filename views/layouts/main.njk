@@ -1,0 +1,99 @@
+{% extends "govuk/template.njk" %}
+
+{% from "govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
+
+{% set htmlLang = "en" %}
+{% set assetPath = "/assets" %}
+{% set themeColor = "#c8ff02" %}
+
+{% block pageTitle %}{{ pageTitle | default("Move It") }}{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="/styles/application.css">
+{% endblock %}
+
+{# Move It is not GOV.UK branded, so do not load GOV.UK identity assets. #}
+{% block headIcons %}{% endblock %}
+
+{% block header %}
+  <header class="app-header" role="banner">
+    <div class="app-header__container govuk-width-container">
+      <a class="app-header__logo-link" href="/" aria-label="Opencast Move It home">
+        <img
+          class="app-header__logo"
+          src="/images/opencast-logo.png"
+          width="143"
+          height="30"
+          alt="Opencast"
+        >
+      </a>
+      <a class="app-header__service-name" href="/">Move It</a>
+    </div>
+  </header>
+
+  {% set accountLinks %}
+    <nav class="app-service-account" aria-label="Account">
+      {% if currentUser %}
+        <span class="app-service-account__name">{{ currentUser.displayName }}</span>
+        <form action="/logout" method="post">
+          <button class="app-service-account__button" type="submit">Sign out</button>
+        </form>
+      {% else %}
+        <a class="govuk-link app-service-account__link" href="/login">Account</a>
+      {% endif %}
+    </nav>
+  {% endset %}
+
+  {{ govukServiceNavigation({
+    classes: "app-service-navigation",
+    slots: {
+      end: {
+        html: accountLinks,
+        align: "inline"
+      }
+    },
+    navigation: [
+      {
+        href: "/",
+        text: "Home",
+        current: currentSection == "home"
+      },
+      {
+        href: "/convert",
+        text: "Convert activity",
+        current: currentSection == "convert"
+      },
+      {
+        href: "/conversions",
+        text: "Conversion guide",
+        current: currentSection == "conversions"
+      },
+      {
+        href: "/scoreboard",
+        text: "Monthly scoreboard",
+        current: currentSection == "scoreboard"
+      },
+      {
+        href: "/about",
+        text: "How it works",
+        current: currentSection == "about"
+      }
+    ]
+  }) }}
+{% endblock %}
+
+{% block footer %}
+  <footer class="app-footer">
+    <div class="govuk-width-container app-footer__container">
+      <p class="govuk-body-s govuk-!-margin-bottom-0">Move It by Opencast</p>
+    </div>
+  </footer>
+{% endblock %}
+
+{% block bodyEnd %}
+  <script type="module" src="/assets/javascripts/govuk-frontend.min.js"></script>
+  <script type="module">
+    import { initAll } from "/assets/javascripts/govuk-frontend.min.js";
+    initAll();
+  </script>
+{% endblock %}

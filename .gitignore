@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+public/assets/
+public/styles/application.css
+*.log
+.DS_Store
+.vercel/
+coverage/

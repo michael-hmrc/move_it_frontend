@@ -1,0 +1,42 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageTitle = monthLabel + " scoreboard - Move It" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <span class="govuk-caption-xl">{{ monthLabel }}</span>
+      <h1 class="govuk-heading-xl">Monthly scoreboard</h1>
+
+      {% if entries.length %}
+        {% set rows = [] %}
+        {% for entry in entries %}
+          {% set rows = (rows.push([
+            { text: entry.rank, format: "numeric" },
+            { text: entry.displayName },
+            { text: entry.totalSteps | string, format: "numeric" },
+            { text: entry.activityCount, format: "numeric" }
+          ]), rows) %}
+        {% endfor %}
+
+        {{ govukTable({
+          firstCellIsHeader: false,
+          head: [
+            { text: "Rank", format: "numeric" },
+            { text: "Display name" },
+            { text: "Estimated steps", format: "numeric" },
+            { text: "Activities", format: "numeric" }
+          ],
+          rows: rows
+        }) }}
+      {% else %}
+        <p class="govuk-body-l">There are no recorded activities this month yet.</p>
+      {% endif %}
+
+      <p class="govuk-body">The scoreboard uses estimated step equivalents and resets at the beginning of each calendar month.</p>
+      <p class="govuk-body"><a class="govuk-link" href="/convert/reset">Add an activity</a></p>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageTitle = "One-hour activity conversion guide - Move It" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h1 class="govuk-heading-xl">One-hour activity conversion guide</h1>
+      <p class="govuk-body-l">Estimated step equivalents for 60 minutes of activity.</p>
+
+      {% set rows = [] %}
+      {% for conversion in conversionRows %}
+        {% set rows = (rows.push([
+          { text: conversion.activityName },
+          { text: conversion.light | string, format: "numeric" },
+          { text: conversion.moderate | string, format: "numeric" },
+          { text: conversion.vigorous | string, format: "numeric" }
+        ]), rows) %}
+      {% endfor %}
+
+      {{ govukTable({
+        caption: "Estimated steps for 60 minutes",
+        captionClasses: "govuk-table__caption--m",
+        firstCellIsHeader: true,
+        head: [
+          { text: "Activity" },
+          { text: "Light intensity", format: "numeric" },
+          { text: "Moderate intensity", format: "numeric" },
+          { text: "Vigorous intensity", format: "numeric" }
+        ],
+        rows: rows
+      }) }}
+
+      {{ govukInsetText({
+        text: "These figures are illustrative estimates, not medical measurements. Step equivalents vary between people and devices."
+      }) }}
+
+      <p class="govuk-body"><a class="govuk-link" href="/convert/reset">Convert your own activity</a></p>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{
+  "name": "move-it-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Convert exercise activities into an estimated number of steps.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run build:assets && tsx watch src/index.ts",
+    "build": "npm run clean && npm run build:assets && tsc",
+    "build:assets": "sass --pkg-importer=node src/styles/application.scss public/styles/application.css --style=compressed --no-source-map && node scripts/copy-assets.mjs",
+    "clean": "node scripts/clean.mjs",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "cookie-session": "^2.1.1",
+    "express": "^5.2.1",
+    "govuk-frontend": "^6.5.0",
+    "nunjucks": "^3.2.4",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cookie-session": "^2.0.49",
+    "@types/node": "^22.0.0",
+    "@types/nunjucks": "^3.2.0",
+    "@types/supertest": "^6.0.0",
+    "sass": "^1.0.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^3.0.0"
+  }
+}

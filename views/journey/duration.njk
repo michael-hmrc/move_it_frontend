@@ -1,0 +1,41 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% set pageTitle = ("Error: " if errors else "") + "How long did the activity last? - Move It" %}
+
+{% block beforeContent %}{{ govukBackLink({ href: "/convert/intensity", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds app-question-page">
+      {% if errors %}
+        {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
+      {% endif %}
+
+      <form action="/convert/duration" method="post" novalidate>
+        {{ govukInput({
+          id: "durationMinutes",
+          name: "durationMinutes",
+          value: values.durationMinutes,
+          classes: "govuk-input--width-4",
+          inputmode: "numeric",
+          spellcheck: false,
+          label: {
+            text: "How long did the activity last?",
+            classes: "govuk-label--xl",
+            isPageHeading: true
+          },
+          hint: { text: "Enter the duration as a whole number." },
+          suffix: { text: "minutes" },
+          errorMessage: { text: errorMessage } if errorMessage
+        }) }}
+
+        {{ govukButton({ text: "Calculate steps" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}
