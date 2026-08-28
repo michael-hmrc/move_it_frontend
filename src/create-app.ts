@@ -86,8 +86,9 @@ export function createApp(
   const app = express();
   const projectRoot = process.cwd();
   const sessionSecret = process.env.SESSION_SECRET;
+  const isProduction = process.env.NODE_ENV === "production";
 
-  if (!sessionSecret && process.env.NODE_ENV === "production") {
+  if (!sessionSecret && isProduction) {
     throw new Error("SESSION_SECRET must be configured in production");
   }
 
@@ -96,7 +97,7 @@ export function createApp(
       path.join(projectRoot, "views"),
       path.join(projectRoot, "node_modules", "govuk-frontend", "dist")
     ],
-    { autoescape: true, express: app, noCache: process.env.NODE_ENV !== "production" }
+    { autoescape: true, express: app, noCache: !isProduction }
   );
 
   app.disable("x-powered-by");
@@ -111,10 +112,14 @@ export function createApp(
       maxAge: 30 * 60 * 1000,
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production"
+      secure: isProduction
     })
   );
-  app.use(express.static(path.join(projectRoot, "public"), { maxAge: "1h" }));
+  app.use(
+    express.static(path.join(projectRoot, "public"), {
+      maxAge: isProduction ? "1h" : 0
+    })
+  );
 
   app.use((request, response, next) => {
     response.locals.currentUser = journey(request).mockUser;

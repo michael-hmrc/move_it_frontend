@@ -40,6 +40,14 @@ describe("Move It application", () => {
     expect(response.text).not.toContain("Crown copyright");
   });
 
+  it("does not cache generated styles during development", async () => {
+    const response = await request(createApp()).get("/styles/application.css");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toContain("max-age=0");
+    expect(response.text).toContain("border-bottom:5px solid #6e4ba2");
+  });
+
   it("validates the display name before continuing", async () => {
     const response = await request(createApp())
       .post("/convert/name")
