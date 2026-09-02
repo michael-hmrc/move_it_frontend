@@ -1,6 +1,7 @@
 {% extends "layouts/main.njk" %}
 
 {% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% set pageTitle = monthLabel + " scoreboard - Move It" %}
 
@@ -36,7 +37,13 @@
       {% endif %}
 
       <p class="govuk-body">The scoreboard uses estimated step equivalents and resets at the beginning of each calendar month.</p>
-      <p class="govuk-body"><a class="govuk-link" href="/convert/reset">Add an activity</a></p>
+
+      {{ govukButton({
+        text: "Submit an activity",
+        href: "/convert/reset",
+        isStartButton: true
+      }) }}
+      
     </div>
   </div>
 {% endblock %}
