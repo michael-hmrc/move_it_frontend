@@ -28,22 +28,25 @@ class UnavailableAuthenticationService implements AuthenticationService {
 }
 
 class SupabaseAuthenticationService implements AuthenticationService {
-  private readonly client;
+  private readonly authClient;
+  private readonly adminClient;
   private readonly projectUrl: string;
 
   constructor(url: string, secretKey: string) {
     this.projectUrl = url;
-    this.client = createClient(url, secretKey, {
+    const clientOptions = {
       auth: { persistSession: false, autoRefreshToken: false }
-    });
+    };
+    this.authClient = createClient(url, secretKey, clientOptions);
+    this.adminClient = createClient(url, secretKey, clientOptions);
   }
 
   async signIn(email: string, password: string): Promise<AuthenticatedUser> {
-    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+    const { data, error } = await this.authClient.auth.signInWithPassword({ email, password });
     if (error || !data.user?.email) {
       throw new Error("Enter a valid email address and password");
     }
-    const { data: profile, error: profileError } = await this.client
+    const { data: profile, error: profileError } = await this.adminClient
       .from("app_users")
       .select("display_name, must_change_password, status")
       .eq("id", data.user.id)
@@ -74,7 +77,7 @@ class SupabaseAuthenticationService implements AuthenticationService {
   }
 
   async requestAccess(email: string, displayName: string, password: string): Promise<void> {
-    const { data, error } = await this.client.auth.admin.createUser({
+    const { data, error } = await this.adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true
@@ -82,7 +85,7 @@ class SupabaseAuthenticationService implements AuthenticationService {
     if (error || !data.user) {
       throw new Error(`Could not create account: ${error?.message ?? "No user returned"}`);
     }
-    const { error: profileError } = await this.client.from("app_users").insert({
+    const { error: profileError } = await this.adminClient.from("app_users").insert({
       id: data.user.id,
       email,
       display_name: displayName,
@@ -90,28 +93,28 @@ class SupabaseAuthenticationService implements AuthenticationService {
       status: "pending"
     });
     if (profileError) {
-      await this.client.auth.admin.deleteUser(data.user.id);
+      await this.adminClient.auth.admin.deleteUser(data.user.id);
       throw new Error(`Could not create account: ${profileError.message}`);
     }
   }
 
   async approveUser(userId: string): Promise<void> {
-    const { error } = await this.client.from("app_users").update({ status: "approved" }).eq("id", userId);
+    const { error } = await this.adminClient.from("app_users").update({ status: "approved" }).eq("id", userId);
     if (error) throw new Error(`Could not approve account: ${error.message}`);
   }
 
   async deactivateUser(userId: string): Promise<void> {
-    const { error } = await this.client.from("app_users").update({ status: "deactivated" }).eq("id", userId);
+    const { error } = await this.adminClient.from("app_users").update({ status: "deactivated" }).eq("id", userId);
     if (error) throw new Error(`Could not deactivate account: ${error.message}`);
   }
 
   async reactivateUser(userId: string): Promise<void> {
-    const { error } = await this.client.from("app_users").update({ status: "approved" }).eq("id", userId);
+    const { error } = await this.adminClient.from("app_users").update({ status: "approved" }).eq("id", userId);
     if (error) throw new Error(`Could not reactivate account: ${error.message}`);
   }
 
   async listUsers(): Promise<AuthenticatedUser[]> {
-    const { data, error } = await this.client
+    const { data, error } = await this.adminClient
       .from("app_users")
       .select("id, email, display_name, must_change_password, status")
       .order("created_at", { ascending: false });
