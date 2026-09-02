@@ -29,8 +29,10 @@ class UnavailableAuthenticationService implements AuthenticationService {
 
 class SupabaseAuthenticationService implements AuthenticationService {
   private readonly client;
+  private readonly projectUrl: string;
 
   constructor(url: string, secretKey: string) {
+    this.projectUrl = url;
     this.client = createClient(url, secretKey, {
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -48,13 +50,18 @@ class SupabaseAuthenticationService implements AuthenticationService {
       .single();
     if (profileError) {
       console.error("Could not load Move It account profile after sign-in", {
+        userId: data.user.id,
+        projectUrl: this.projectUrl,
         code: profileError.code,
         message: profileError.message
       });
       throw new Error("This account has not been invited to Move It");
     }
     if (!profile) {
-      console.error("No Move It account profile found after sign-in");
+      console.error("No Move It account profile found after sign-in", {
+        userId: data.user.id,
+        projectUrl: this.projectUrl
+      });
       throw new Error("This account has not been invited to Move It");
     }
     return {
