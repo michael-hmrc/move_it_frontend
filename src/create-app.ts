@@ -363,7 +363,7 @@ export function createApp(
       }
       if (user.status !== "approved") return response.status(403).render("account/access-unavailable");
       journey(request).user = user;
-      return response.redirect(303, "/convert");
+      return response.redirect(303, "/");
     } catch (error) {
       return response.status(401).render("account/login", {
         values: { email },

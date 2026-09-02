@@ -287,7 +287,7 @@ describe("Move It application", () => {
       password: "A-safe-test-password1!"
     });
     expect(login.status).toBe(303);
-    expect(login.headers.location).toBe("/convert");
+    expect(login.headers.location).toBe("/");
     expect(authentication.signIn).toHaveBeenCalled();
 
     const signedIn = await agent.get("/");
