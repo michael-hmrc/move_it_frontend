@@ -46,7 +46,15 @@ class SupabaseAuthenticationService implements AuthenticationService {
       .select("display_name, must_change_password, status")
       .eq("id", data.user.id)
       .single();
-    if (profileError || !profile) {
+    if (profileError) {
+      console.error("Could not load Move It account profile after sign-in", {
+        code: profileError.code,
+        message: profileError.message
+      });
+      throw new Error("This account has not been invited to Move It");
+    }
+    if (!profile) {
+      console.error("No Move It account profile found after sign-in");
       throw new Error("This account has not been invited to Move It");
     }
     return {
