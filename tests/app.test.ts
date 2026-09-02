@@ -58,6 +58,7 @@ describe("Move It application", () => {
     expect(response.text).toContain("Submit activity");
     expect(response.text).toContain('href="/login"');
     expect(response.text).toContain(">Account</a>");
+    expect(response.text).toContain('href="/admin/login">Administrator sign in</a>');
     expect(response.text).toContain('aria-current="page"');
   });
 
@@ -228,6 +229,13 @@ describe("Move It application", () => {
     expect(response.headers.location).toBe("/login");
   });
 
+  it("requires sign-in to view the monthly scoreboard", async () => {
+    const response = await request(testApp()).get("/scoreboard");
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/login");
+  });
+
   it("renders the monthly scoreboard", async () => {
     const repository = repositoryWith({
       listMonthly: vi.fn().mockResolvedValue([
@@ -235,7 +243,9 @@ describe("Move It application", () => {
       ])
     });
 
-    const response = await request(createApp(repository)).get("/scoreboard");
+    const agent = request.agent(testApp(repository));
+    await signIn(agent);
+    const response = await agent.get("/scoreboard");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("Monthly scoreboard");
@@ -245,7 +255,9 @@ describe("Move It application", () => {
   });
 
   it("renders labelled sample scoreboard data when there are no saved entries", async () => {
-    const response = await request(createApp()).get("/scoreboard");
+    const agent = request.agent(testApp());
+    await signIn(agent);
+    const response = await agent.get("/scoreboard");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("This is sample data");

@@ -445,7 +445,8 @@ export function createApp(
     response.render("conversions", { conversionRows });
   });
 
-  app.get("/scoreboard", async (_request, response, next) => {
+  app.get("/scoreboard", async (request, response, next) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     const now = new Date();
     const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
     const monthLabel = new Intl.DateTimeFormat("en-GB", {
