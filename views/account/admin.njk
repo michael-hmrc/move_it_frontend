@@ -5,16 +5,9 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% block content %}
 <div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-  <h1 class="govuk-heading-xl">Invite a member</h1>
-  <p class="govuk-body">Create an account, then share the temporary password with the colleague through a trusted channel such as Teams.</p>
-  {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
-  <form action="/admin/invitations" method="post" novalidate>
-    {{ govukInput({ id: "displayName", name: "displayName", value: values.displayName, label: { text: "Display name", classes: "govuk-label--m" } }) }}
-    {{ govukInput({ id: "email", name: "email", type: "email", value: values.email, label: { text: "Opencast email address", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorMessage }) }}
-    {{ govukButton({ text: "Create invitation" }) }}
-  </form>
-  <h2 class="govuk-heading-l">Members</h2>
-  {% set rows = [] %}{% for user in users %}{% set rows = (rows.push([{ text: user.displayName }, { text: user.email }, { text: "Temporary password pending" if user.mustChangePassword else "Active" }]), rows) %}{% endfor %}
-  {{ govukTable({ head: [{ text: "Display name" }, { text: "Email" }, { text: "Status" }], rows: rows }) }}
+  <h1 class="govuk-heading-xl">Access requests</h1>
+  <p class="govuk-body">Approve only colleagues you have verified through a trusted channel.</p>
+  {% set rows = [] %}{% for user in users %}{% set action = '<form action="/admin/users/' + user.id + '/approve" method="post"><button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" type="submit">Approve</button></form>' if user.status == "pending" else "" %}{% set rows = (rows.push([{ text: user.displayName }, { text: user.email }, { text: user.status | capitalize }, { html: action }]), rows) %}{% endfor %}
+  {{ govukTable({ head: [{ text: "Display name" }, { text: "Email" }, { text: "Status" }, { text: "Action" }], rows: rows }) }}
 </div></div>
 {% endblock %}

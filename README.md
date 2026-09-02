@@ -84,17 +84,17 @@ user ID. Only email addresses at `AUTH_ALLOWED_EMAIL_DOMAIN` can sign in.
 
 ## Configure invite-only accounts
 
-Move It uses invite-only Supabase Auth accounts. Add the following values:
+Move It uses administrator-approved Supabase Auth accounts. Add the following values:
 
 ```dotenv
 AUTH_ALLOWED_EMAIL_DOMAIN=opencastsoftware.com
 ADMIN_ACCESS_TOKEN=a-separate-long-random-value
 ```
 
-Set `ADMIN_ACCESS_TOKEN` to a separate long random value. An administrator
-visits `/admin/login`, creates accounts for approved addresses, and shares the
-one-time temporary password through a trusted channel. Users must change it on
-their first sign-in. Do not enable public Supabase sign-up for this application.
+Set `ADMIN_ACCESS_TOKEN` to a separate long random value. Users request access
+at `/request-access` and choose their own password. An administrator visits
+`/admin/login` and approves verified requests. Only approved accounts can use
+the activity journey. Do not enable public Supabase sign-up for this application.
 
 ## Deploy to Vercel
 

@@ -17,16 +17,11 @@ const authentication: AuthenticationService = {
     id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
     email: "alex@opencastsoftware.com",
     displayName: "Alex",
-    mustChangePassword: false
+    mustChangePassword: false,
+    status: "approved"
   }),
-  inviteUser: vi.fn().mockResolvedValue({
-    id: "2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7",
-    email: "sam@opencastsoftware.com",
-    displayName: "Sam",
-    mustChangePassword: true,
-    temporaryPassword: "temporary-password"
-  }),
-  changePassword: vi.fn().mockResolvedValue(undefined),
+  requestAccess: vi.fn().mockResolvedValue(undefined),
+  approveUser: vi.fn().mockResolvedValue(undefined),
   listUsers: vi.fn().mockResolvedValue([])
 };
 
@@ -47,7 +42,8 @@ describe("Move It application", () => {
       id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
       email: "alex@opencastsoftware.com",
       displayName: "Alex",
-      mustChangePassword: false
+      mustChangePassword: false,
+      status: "approved"
     });
   });
 
@@ -281,12 +277,12 @@ describe("Move It application", () => {
     expect(response.text).toContain('aria-current="page"');
   });
 
-  it("renders the invite-only account page", async () => {
+  it("renders the approved-members account page", async () => {
     const login = await request(testApp()).get("/login");
     const signup = await request(testApp()).get("/signup");
 
     expect(login.status).toBe(200);
-    expect(login.text).toContain("Move It is invite only");
+    expect(login.text).toContain("Move It is for approved members");
     expect(login.text).toContain("Sign in");
     expect(signup.status).toBe(303);
     expect(signup.headers.location).toBe("/login");
@@ -325,11 +321,39 @@ describe("Move It application", () => {
     expect(response.text).toContain("@opencastsoftware.com");
   });
 
-  it("allows an administrator to create an invitation", async () => {
+  it("does not permit administrator access without the configured token", async () => {
     const agent = request.agent(testApp());
     const adminLogin = await agent.post("/admin/login").type("form").send({
       adminAccessToken: ""
     });
     expect(adminLogin.status).toBe(401);
+  });
+
+  it("lets an administrator approve a pending request", async () => {
+    const priorToken = process.env.ADMIN_ACCESS_TOKEN;
+    process.env.ADMIN_ACCESS_TOKEN = "test-admin-token";
+    vi.mocked(authentication.listUsers).mockResolvedValueOnce([{
+      id: "2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      email: "sam@opencastsoftware.com",
+      displayName: "Sam",
+      mustChangePassword: false,
+      status: "pending"
+    }]);
+    const agent = request.agent(testApp());
+
+    try {
+      const login = await agent.post("/admin/login").type("form").send({
+        adminAccessToken: "test-admin-token"
+      });
+      expect(login.headers.location).toBe("/admin");
+      const page = await agent.get("/admin");
+      expect(page.text).toContain("Approve");
+      const approval = await agent.post("/admin/users/2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7/approve");
+      expect(approval.headers.location).toBe("/admin");
+      expect(authentication.approveUser).toHaveBeenCalledWith("2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7");
+    } finally {
+      if (priorToken === undefined) delete process.env.ADMIN_ACCESS_TOKEN;
+      else process.env.ADMIN_ACCESS_TOKEN = priorToken;
+    }
   });
 });

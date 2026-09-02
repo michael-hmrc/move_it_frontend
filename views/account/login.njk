@@ -14,7 +14,7 @@
       {% if errors %}
         {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
       {% endif %}
-      <p class="govuk-body">Move It is invite only. Use the email address and password provided by an administrator.</p>
+      <p class="govuk-body">Move It is for approved members. If you do not have an account, request access.</p>
       <form action="/login" method="post" novalidate>
           {{ govukInput({
             id: "email",
@@ -34,6 +34,7 @@
           }) }}
           {{ govukButton({ text: "Sign in" }) }}
       </form>
+      <p class="govuk-body"><a class="govuk-link" href="/request-access">Request access</a></p>
       <p class="govuk-body"><a class="govuk-link" href="/">Return to the homepage</a></p>
     </div>
   </div>

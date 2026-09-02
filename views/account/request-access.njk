@@ -1,0 +1,14 @@
+{% extends "layouts/main.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% block content %}
+<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+<h1 class="govuk-heading-xl">Request access</h1><p class="govuk-body">An administrator will review your request before you can use Move It.</p>
+{% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
+<form action="/request-access" method="post" novalidate>
+{{ govukInput({ id: "displayName", name: "displayName", value: values.displayName, label: { text: "Display name", classes: "govuk-label--m" } }) }}
+{{ govukInput({ id: "email", name: "email", type: "email", value: values.email, autocomplete: "email", label: { text: "Opencast email address", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorMessage }) }}
+{{ govukInput({ id: "password", name: "password", type: "password", autocomplete: "new-password", label: { text: "Choose a password", classes: "govuk-label--m" }, hint: { text: "Use at least 12 characters." } }) }}
+{{ govukButton({ text: "Request access" }) }}</form>
+</div></div>{% endblock %}

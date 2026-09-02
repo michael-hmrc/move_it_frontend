@@ -107,11 +107,6 @@ function requireAuthenticatedUser(request: Request, response: Response) {
     return undefined;
   }
 
-  if (user.mustChangePassword) {
-    response.redirect(303, "/account/change-password");
-    return undefined;
-  }
-
   return user;
 }
 
@@ -375,8 +370,11 @@ export function createApp(
 
     try {
       const user = await authentication.signIn(email, parsed.data.password);
+      if (user.status !== "approved") {
+        return response.status(403).render("account/access-pending");
+      }
       journey(request).user = user;
-      return response.redirect(303, user.mustChangePassword ? "/account/change-password" : "/convert");
+      return response.redirect(303, "/convert");
     } catch (error) {
       return response.status(401).render("account/login", {
         values: { email },
@@ -391,20 +389,17 @@ export function createApp(
     response.redirect(303, "/");
   });
 
-  app.get("/account/change-password", (request, response) => {
-    if (!journey(request).user) return response.redirect(303, "/login");
-    response.render("account/change-password");
-  });
-
-  app.post("/account/change-password", async (request, response, next) => {
-    const user = journey(request).user;
-    if (!user) return response.redirect(303, "/login");
-    const parsed = passwordSchema.safeParse(request.body);
-    if (!parsed.success) return renderFieldError(response, "account/change-password", parsed.error, "password", request.body);
+  app.get("/request-access", (_request, response) => response.render("account/request-access"));
+  app.post("/request-access", async (request, response, next) => {
+    const parsed = emailSchema.and(displayNameSchema).and(passwordSchema).safeParse(request.body);
+    if (!parsed.success) return renderFieldError(response, "account/request-access", parsed.error, "email", request.body);
+    const email = normaliseEmail(parsed.data.email);
+    if (!isAllowedEmail(email, allowedEmailDomain)) {
+      return response.status(400).render("account/request-access", { values: request.body, errorMessage: `Enter an email address ending in @${allowedEmailDomain}`, errors: [{ text: `Enter an email address ending in @${allowedEmailDomain}`, href: "#email" }] });
+    }
     try {
-      await authentication.changePassword(user.id, parsed.data.password);
-      user.mustChangePassword = false;
-      return response.redirect(303, "/convert");
+      await authentication.requestAccess(email, parsed.data.displayName, parsed.data.password);
+      return response.render("account/access-requested");
     } catch (error) { return next(error); }
   });
 
@@ -427,17 +422,11 @@ export function createApp(
     catch (error) { return next(error); }
   });
 
-  app.post("/admin/invitations", async (request, response, next) => {
+  app.post("/admin/users/:id/approve", async (request, response, next) => {
     if (!requireAdmin(request, response)) return;
-    const parsed = emailSchema.and(displayNameSchema).safeParse(request.body);
-    if (!parsed.success) return renderFieldError(response, "account/admin", parsed.error, "email", request.body, { users: await authentication.listUsers() });
-    const email = normaliseEmail(parsed.data.email);
-    if (!isAllowedEmail(email, allowedEmailDomain)) {
-      return response.status(400).render("account/admin", { users: await authentication.listUsers(), values: request.body, errorMessage: `Enter an email address ending in @${allowedEmailDomain}`, errors: [{ text: `Enter an email address ending in @${allowedEmailDomain}`, href: "#email" }] });
-    }
     try {
-      const invitation = await authentication.inviteUser(email, parsed.data.displayName);
-      return response.render("account/invitation-created", { invitation });
+      await authentication.approveUser(request.params.id);
+      return response.redirect(303, "/admin");
     } catch (error) { return next(error); }
   });
 
