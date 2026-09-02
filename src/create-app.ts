@@ -39,7 +39,6 @@ import {
 } from "./persistence/conversion-repository.js";
 
 interface JourneySession {
-  displayName?: string;
   activity?: ActivityId;
   intensity?: Intensity;
   durationMinutes?: number;
@@ -210,27 +209,14 @@ export function createApp(
 
   app.get("/convert", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
-    response.render("index", {
-      values: { displayName: journey(request).displayName }
+    response.render("journey/activity", {
+      activities,
+      values: { activity: journey(request).activity }
     });
-  });
-
-  app.post("/convert/name", (request, response) => {
-    if (!requireAuthenticatedUser(request, response)) return;
-    const parsed = displayNameSchema.safeParse(request.body);
-
-    if (!parsed.success) {
-      return renderFieldError(response, "index", parsed.error, "displayName", request.body);
-    }
-
-    journey(request).displayName = parsed.data.displayName;
-    journey(request).user!.displayName = parsed.data.displayName;
-    return response.redirect(303, "/convert/activity");
   });
 
   app.get("/convert/activity", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
-    if (!requireJourneyValue(request, response, "displayName", "/convert")) return;
 
     response.render("journey/activity", {
       activities,
@@ -240,7 +226,6 @@ export function createApp(
 
   app.post("/convert/activity", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
-    if (!requireJourneyValue(request, response, "displayName", "/convert")) return;
     const parsed = activitySchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -320,7 +305,7 @@ export function createApp(
     const session = journey(request);
     session.durationMinutes = parsed.data.durationMinutes;
     const result = convertActivityToSteps({
-      displayName: session.displayName!,
+      displayName: user.displayName,
       activity: session.activity!,
       intensity: session.intensity!,
       durationMinutes: session.durationMinutes

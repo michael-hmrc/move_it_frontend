@@ -77,13 +77,13 @@ describe("Move It application", () => {
     }
   });
 
-  it("starts the conversion with one question about the display name", async () => {
+  it("starts the conversion with the activity question and uses the account display name", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);
     const response = await agent.get("/convert");
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain("What is your display name?");
+    expect(response.text).toContain("What activity did you do?");
     expect(response.text).toContain('src="/images/opencast-logo.png"');
     expect(response.text).toContain('alt="Opencast"');
     expect(response.text).toContain('class="app-header__brand-stripe"');
@@ -92,9 +92,7 @@ describe("Move It application", () => {
     expect(response.text).toContain('class="app-footer__logo-link" href="/"');
     expect(response.text).toContain('class="app-footer__logo"');
     expect(response.text).toContain("How it works");
-    expect(response.text).toContain('autocomplete="nickname"');
-    expect(response.text).toContain('maxlength="40"');
-    expect(response.text).not.toContain("What activity did you do?");
+    expect(response.text).not.toContain("What is your display name?");
     expect(response.text).not.toContain("Crown copyright");
   });
 
@@ -108,36 +106,9 @@ describe("Move It application", () => {
     expect(response.text).toContain("height:8px");
   });
 
-  it("validates the display name before continuing", async () => {
-    const agent = request.agent(testApp());
-    await signIn(agent);
-    const response = await agent
-      .post("/convert/name")
-      .type("form")
-      .send({ displayName: "" });
-
-    expect(response.status).toBe(400);
-    expect(response.text).toContain("There is a problem");
-    expect(response.text).toContain("Display name must be at least 2 characters");
-  });
-
-  it("requires a meaningful display name", async () => {
-    const agent = request.agent(testApp());
-    await signIn(agent);
-    const response = await agent
-      .post("/convert/name")
-      .type("form")
-      .send({ displayName: "--" });
-
-    expect(response.status).toBe(400);
-    expect(response.text).toContain("Display name must include a letter or number");
-  });
-
   it("validates activity, intensity and duration values", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);
-
-    await agent.post("/convert/name").type("form").send({ displayName: "Alex" });
 
     const invalidActivity = await agent
       .post("/convert/activity")
@@ -184,13 +155,6 @@ describe("Move It application", () => {
     const agent = request.agent(testApp(repository));
     await signIn(agent);
 
-    const nameResponse = await agent
-      .post("/convert/name")
-      .type("form")
-      .send({ displayName: "Morgan" });
-    expect(nameResponse.status).toBe(303);
-    expect(nameResponse.headers.location).toBe("/convert/activity");
-
     const activityPage = await agent.get("/convert/activity");
     expect(activityPage.text).toContain("What activity did you do?");
 
@@ -227,7 +191,7 @@ describe("Move It application", () => {
     expect(resultPage.text).toContain("4200 steps");
     expect(repository.save).toHaveBeenCalledWith(
       expect.objectContaining({
-        displayName: "Morgan",
+        displayName: "Alex",
         activity: "swimming",
         intensity: "vigorous",
         durationMinutes: 20,
