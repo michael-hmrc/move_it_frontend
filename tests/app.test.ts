@@ -1,6 +1,7 @@
 import request from "supertest";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/create-app.js";
+import type { AuthenticationService } from "../src/persistence/authentication.js";
 import type { ConversionRepository } from "../src/persistence/conversion-repository.js";
 
 function repositoryWith(overrides: Partial<ConversionRepository> = {}): ConversionRepository {
@@ -11,7 +12,45 @@ function repositoryWith(overrides: Partial<ConversionRepository> = {}): Conversi
   };
 }
 
+const authentication: AuthenticationService = {
+  signIn: vi.fn().mockResolvedValue({
+    id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+    email: "alex@opencastsoftware.com",
+    displayName: "Alex",
+    mustChangePassword: false
+  }),
+  inviteUser: vi.fn().mockResolvedValue({
+    id: "2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+    email: "sam@opencastsoftware.com",
+    displayName: "Sam",
+    mustChangePassword: true,
+    temporaryPassword: "temporary-password"
+  }),
+  changePassword: vi.fn().mockResolvedValue(undefined),
+  listUsers: vi.fn().mockResolvedValue([])
+};
+
+function testApp(repository: ConversionRepository = repositoryWith()) {
+  return createApp(repository, authentication);
+}
+
+async function signIn(agent: ReturnType<typeof request.agent>) {
+  await agent.post("/login").type("form").send({
+    email: "alex@opencastsoftware.com",
+    password: "a-safe-test-password"
+  });
+}
+
 describe("Move It application", () => {
+  beforeEach(() => {
+    vi.mocked(authentication.signIn).mockResolvedValue({
+      id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      email: "alex@opencastsoftware.com",
+      displayName: "Alex",
+      mustChangePassword: false
+    });
+  });
+
   it("renders a homepage with the main service links", async () => {
     const response = await request(createApp()).get("/");
 
@@ -27,7 +66,9 @@ describe("Move It application", () => {
   });
 
   it("starts the conversion with one question about the display name", async () => {
-    const response = await request(createApp()).get("/convert");
+    const agent = request.agent(testApp());
+    await signIn(agent);
+    const response = await agent.get("/convert");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("What is your display name?");
@@ -56,7 +97,9 @@ describe("Move It application", () => {
   });
 
   it("validates the display name before continuing", async () => {
-    const response = await request(createApp())
+    const agent = request.agent(testApp());
+    await signIn(agent);
+    const response = await agent
       .post("/convert/name")
       .type("form")
       .send({ displayName: "" });
@@ -67,7 +110,9 @@ describe("Move It application", () => {
   });
 
   it("requires a meaningful display name", async () => {
-    const response = await request(createApp())
+    const agent = request.agent(testApp());
+    await signIn(agent);
+    const response = await agent
       .post("/convert/name")
       .type("form")
       .send({ displayName: "--" });
@@ -77,7 +122,8 @@ describe("Move It application", () => {
   });
 
   it("validates activity, intensity and duration values", async () => {
-    const agent = request.agent(createApp());
+    const agent = request.agent(testApp());
+    await signIn(agent);
 
     await agent.post("/convert/name").type("form").send({ displayName: "Alex" });
 
@@ -123,7 +169,8 @@ describe("Move It application", () => {
 
   it("completes the multi-page journey and persists the result", async () => {
     const repository = repositoryWith();
-    const agent = request.agent(createApp(repository));
+    const agent = request.agent(testApp(repository));
+    await signIn(agent);
 
     const nameResponse = await agent
       .post("/convert/name")
@@ -173,15 +220,16 @@ describe("Move It application", () => {
         intensity: "vigorous",
         durationMinutes: 20,
         estimatedSteps: 4200
-      })
+      }),
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7"
     );
   });
 
-  it("redirects users who try to skip a journey step", async () => {
-    const response = await request(createApp()).get("/convert/duration");
+  it("redirects unauthenticated users to sign in", async () => {
+    const response = await request(testApp()).get("/convert/duration");
 
     expect(response.status).toBe(303);
-    expect(response.headers.location).toBe("/convert/intensity");
+    expect(response.headers.location).toBe("/login");
   });
 
   it("renders the monthly scoreboard", async () => {
@@ -233,24 +281,30 @@ describe("Move It application", () => {
     expect(response.text).toContain('aria-current="page"');
   });
 
-  it("renders the mocked account pages", async () => {
-    const login = await request(createApp()).get("/login");
-    const signup = await request(createApp()).get("/signup");
+  it("renders the invite-only account page", async () => {
+    const login = await request(testApp()).get("/login");
+    const signup = await request(testApp()).get("/signup");
 
     expect(login.status).toBe(200);
-    expect(login.text).toContain("does not collect credentials");
-    expect(signup.status).toBe(200);
-    expect(signup.text).toContain("Account registration is not available");
+    expect(login.text).toContain("Move It is invite only");
+    expect(login.text).toContain("Sign in");
+    expect(signup.status).toBe(303);
+    expect(signup.headers.location).toBe("/login");
   });
 
-  it("shows a dynamic mock account state and signs out", async () => {
-    const agent = request.agent(createApp());
+  it("signs in an invited user and signs out", async () => {
+    const agent = request.agent(testApp());
 
-    const login = await agent.post("/login").type("form").send({});
+    const login = await agent.post("/login").type("form").send({
+      email: "alex@opencastsoftware.com",
+      password: "a-safe-test-password"
+    });
     expect(login.status).toBe(303);
+    expect(login.headers.location).toBe("/convert");
+    expect(authentication.signIn).toHaveBeenCalled();
 
     const signedIn = await agent.get("/");
-    expect(signedIn.text).toContain("Demo user");
+    expect(signedIn.text).toContain("Alex");
     expect(signedIn.text).toContain("Sign out");
 
     const logout = await agent.post("/logout").type("form").send({});
@@ -259,5 +313,23 @@ describe("Move It application", () => {
     const signedOut = await agent.get("/");
     expect(signedOut.text).toContain(">Account</a>");
     expect(signedOut.text).not.toContain("Sign out");
+  });
+
+  it("rejects a non-Opencast email address", async () => {
+    const response = await request(testApp())
+      .post("/login")
+      .type("form")
+      .send({ email: "alex@example.com", password: "a-safe-test-password" });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain("@opencastsoftware.com");
+  });
+
+  it("allows an administrator to create an invitation", async () => {
+    const agent = request.agent(testApp());
+    const adminLogin = await agent.post("/admin/login").type("form").send({
+      adminAccessToken: ""
+    });
+    expect(adminLogin.status).toBe(401);
   });
 });

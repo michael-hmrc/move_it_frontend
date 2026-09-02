@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { ConversionResult } from "../domain/conversion.js";
 
 export interface ConversionRepository {
-  save(result: ConversionResult): Promise<void>;
+  save(result: ConversionResult, userId: string): Promise<void>;
   listMonthly(monthStart: string): Promise<ScoreboardEntry[]>;
 }
 
@@ -38,8 +38,9 @@ class SupabaseConversionRepository implements ConversionRepository {
     });
   }
 
-  async save(result: ConversionResult): Promise<void> {
+  async save(result: ConversionResult, userId: string): Promise<void> {
     const { error } = await this.client.from("conversion_records").insert({
+      user_id: userId,
       display_name: result.displayName,
       activity: result.activity,
       intensity: result.intensity,

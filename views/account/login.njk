@@ -2,17 +2,37 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 
-{% set pageTitle = "Your Account - Move It" %}
+{% set pageTitle = ("Error: " if errors else "") + "Sign in - Move It" %}
 
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
-      <h1 class="govuk-heading-xl">Your Account</h1>
-      {{ govukInsetText({ text: "This prototype uses a mock account and does not collect credentials." }) }}
-      <p class="govuk-body">Continue as the demo user to preview how a signed-in account will appear in the service navigation.</p>
-      <form action="/login" method="post">
-        {{ govukButton({ text: "Continue as Demo user" }) }}
+      <h1 class="govuk-heading-xl">Sign in</h1>
+      {% if errors %}
+        {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
+      {% endif %}
+      <p class="govuk-body">Move It is invite only. Use the email address and password provided by an administrator.</p>
+      <form action="/login" method="post" novalidate>
+          {{ govukInput({
+            id: "email",
+            name: "email",
+            type: "email",
+            value: values.email,
+            autocomplete: "email",
+            label: { text: "Email address", classes: "govuk-label--m", isPageHeading: false },
+            errorMessage: { text: errorMessage } if errorMessage
+          }) }}
+          {{ govukInput({
+            id: "password",
+            name: "password",
+            type: "password",
+            autocomplete: "current-password",
+            label: { text: "Password", classes: "govuk-label--m", isPageHeading: false }
+          }) }}
+          {{ govukButton({ text: "Sign in" }) }}
       </form>
       <p class="govuk-body"><a class="govuk-link" href="/">Return to the homepage</a></p>
     </div>

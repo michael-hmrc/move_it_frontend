@@ -13,6 +13,20 @@ export const displayNameSchema = z.object({
     )
 });
 
+export const emailSchema = z.object({
+  email: z
+    .string({ error: "Enter your email address" })
+    .trim()
+    .email("Enter an email address")
+});
+
+export const passwordSchema = z.object({
+  password: z
+    .string({ error: "Enter a password" })
+    .min(12, "Password must be at least 12 characters")
+    .max(128, "Password must be 128 characters or fewer")
+});
+
 export const activitySchema = z.object({
   activity: z.preprocess(
     (value) => value ?? "",
