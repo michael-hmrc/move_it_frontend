@@ -13,14 +13,6 @@ export interface ScoreboardEntry {
   activityCount: number;
 }
 
-export const sampleScoreboardEntries: ScoreboardEntry[] = [
-  { rank: 1, displayName: "Alex", totalSteps: 48250, activityCount: 7 },
-  { rank: 2, displayName: "Sam", totalSteps: 41600, activityCount: 6 },
-  { rank: 3, displayName: "Jordan", totalSteps: 35750, activityCount: 5 },
-  { rank: 4, displayName: "Taylor", totalSteps: 29100, activityCount: 4 },
-  { rank: 5, displayName: "Morgan", totalSteps: 22400, activityCount: 3 }
-];
-
 class NoopConversionRepository implements ConversionRepository {
   async save(): Promise<void> {}
 

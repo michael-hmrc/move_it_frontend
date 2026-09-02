@@ -1,10 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversionResult } from "../src/domain/conversion.js";
-import {
-  createConversionRepository,
-  sampleScoreboardEntries
-} from "../src/persistence/conversion-repository.js";
+import { createConversionRepository } from "../src/persistence/conversion-repository.js";
 
 const supabase = vi.hoisted(() => {
   const insert = vi.fn();
@@ -102,18 +99,5 @@ describe("conversion repository", () => {
     await expect(configuredRepository().listMonthly("2026-08-01")).rejects.toThrow(
       "Could not load scoreboard: read failed"
     );
-  });
-});
-
-describe("sample scoreboard data", () => {
-  it("is ranked in descending step order with unique display names", () => {
-    expect(sampleScoreboardEntries.map(({ rank }) => rank)).toEqual([1, 2, 3, 4, 5]);
-    expect(new Set(sampleScoreboardEntries.map(({ displayName }) => displayName)).size)
-      .toBe(sampleScoreboardEntries.length);
-
-    for (let index = 1; index < sampleScoreboardEntries.length; index += 1) {
-      expect(sampleScoreboardEntries[index - 1].totalSteps)
-        .toBeGreaterThan(sampleScoreboardEntries[index].totalSteps);
-    }
   });
 });

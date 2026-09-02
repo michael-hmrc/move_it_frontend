@@ -266,18 +266,18 @@ describe("Move It application", () => {
     expect(response.text).toContain("Monthly scoreboard");
     expect(response.text).toContain("Morgan");
     expect(response.text).toContain("8400");
-    expect(response.text).not.toContain("This is sample data");
+    expect(response.text).not.toContain("There are no recorded activities this month yet.");
   });
 
-  it("renders labelled sample scoreboard data when there are no saved entries", async () => {
+  it("renders an empty scoreboard when there are no saved entries", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);
     const response = await agent.get("/scoreboard");
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain("This is sample data");
-    expect(response.text).toContain("Alex");
-    expect(response.text).toContain("48250");
+    expect(response.text).toContain("There are no recorded activities this month yet.");
+    expect(response.text).not.toContain("This is sample data");
+    expect(response.text).not.toContain("48250");
   });
 
   it("renders an explanation page from the service navigation", async () => {

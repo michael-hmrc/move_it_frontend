@@ -35,7 +35,6 @@ import {
 } from "./persistence/authentication.js";
 import {
   createConversionRepository,
-  sampleScoreboardEntries,
   type ConversionRepository
 } from "./persistence/conversion-repository.js";
 
@@ -477,10 +476,8 @@ export function createApp(
     }).format(now);
 
     try {
-      const storedEntries = await repository.listMonthly(monthStart);
-      const isDemoData = storedEntries.length === 0;
-      const entries = isDemoData ? sampleScoreboardEntries : storedEntries;
-      return response.render("scoreboard", { entries, isDemoData, monthLabel });
+      const entries = await repository.listMonthly(monthStart);
+      return response.render("scoreboard", { entries, monthLabel });
     } catch (error) {
       return next(error);
     }
