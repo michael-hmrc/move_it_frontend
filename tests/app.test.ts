@@ -64,6 +64,19 @@ describe("Move It application", () => {
     expect(response.text).toContain('aria-current="page"');
   });
 
+  it("adds Vercel Analytics to pages deployed on Vercel", async () => {
+    const priorVercel = process.env.VERCEL;
+    process.env.VERCEL = "1";
+
+    try {
+      const response = await request(createApp()).get("/");
+      expect(response.text).toContain('src="/_vercel/insights/script.js"');
+    } finally {
+      if (priorVercel === undefined) delete process.env.VERCEL;
+      else process.env.VERCEL = priorVercel;
+    }
+  });
+
   it("starts the conversion with one question about the display name", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);

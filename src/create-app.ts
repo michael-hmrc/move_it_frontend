@@ -167,6 +167,7 @@ export function createApp(
   app.locals.assetVersion = process.env.VERCEL_DEPLOYMENT_ID
     ?? process.env.VERCEL_GIT_COMMIT_SHA
     ?? Date.now().toString(36);
+  app.locals.vercelAnalytics = Boolean(process.env.VERCEL);
   app.use(express.urlencoded({ extended: false }));
   app.use(
     cookieSession({

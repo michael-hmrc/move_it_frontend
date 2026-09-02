@@ -106,6 +106,12 @@
 {% endblock %}
 
 {% block bodyEnd %}
+  {% if vercelAnalytics %}
+    <script>
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  {% endif %}
   <script type="module" src="/assets/javascripts/govuk-frontend.min.js"></script>
   <script type="module">
     import { initAll } from "/assets/javascripts/govuk-frontend.min.js";
