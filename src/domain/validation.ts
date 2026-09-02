@@ -25,6 +25,9 @@ export const passwordSchema = z.object({
     .string({ error: "Enter a password" })
     .min(12, "Password must be at least 12 characters")
     .max(128, "Password must be 128 characters or fewer")
+    .regex(/[A-Z]/, "Password must include an uppercase letter")
+    .regex(/[0-9]/, "Password must include a number")
+    .regex(/[^A-Za-z0-9]/, "Password must include a symbol")
 });
 
 export const activitySchema = z.object({

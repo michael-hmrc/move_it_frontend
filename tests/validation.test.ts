@@ -3,7 +3,8 @@ import {
   activitySchema,
   displayNameSchema,
   durationSchema,
-  intensitySchema
+  intensitySchema,
+  passwordSchema
 } from "../src/domain/validation.js";
 
 function firstError(result: { success: boolean; error?: { issues: Array<{ message: string }> } }) {
@@ -59,5 +60,21 @@ describe("duration validation", () => {
     ["1441", "Duration must be 1,440 minutes or less"]
   ])("rejects %j", (durationMinutes, message) => {
     expect(firstError(durationSchema.safeParse({ durationMinutes }))).toBe(message);
+  });
+});
+
+describe("password validation", () => {
+  it("accepts a password with the required character types", () => {
+    expect(passwordSchema.parse({ password: "MoveItPassword1!" })).toEqual({
+      password: "MoveItPassword1!"
+    });
+  });
+
+  it.each([
+    ["password-without-number!", "Password must include an uppercase letter"],
+    ["PasswordWithoutNumber!", "Password must include a number"],
+    ["PasswordWithoutSymbol1", "Password must include a symbol"]
+  ])("rejects missing required characters", (password, message) => {
+    expect(firstError(passwordSchema.safeParse({ password }))).toBe(message);
   });
 });

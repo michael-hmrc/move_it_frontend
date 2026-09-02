@@ -68,12 +68,15 @@ function renderFieldError(
   additionalContext: Record<string, unknown> = {}
 ) {
   const message = error.issues[0]?.message ?? "Enter a valid value";
+  const issueField = error.issues[0]?.path[0];
+  const errorField = typeof issueField === "string" ? issueField : field;
 
   return response.status(400).render(view, {
     ...additionalContext,
     values,
     errorMessage: message,
-    errors: [{ text: message, href: `#${field}` }]
+    errorField,
+    errors: [{ text: message, href: `#${errorField}` }]
   });
 }
 

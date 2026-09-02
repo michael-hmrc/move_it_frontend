@@ -32,7 +32,7 @@ function testApp(repository: ConversionRepository = repositoryWith()) {
 async function signIn(agent: ReturnType<typeof request.agent>) {
   await agent.post("/login").type("form").send({
     email: "alex@opencastsoftware.com",
-    password: "a-safe-test-password"
+    password: "A-safe-test-password1!"
   });
 }
 
@@ -305,7 +305,7 @@ describe("Move It application", () => {
 
     const login = await agent.post("/login").type("form").send({
       email: "alex@opencastsoftware.com",
-      password: "a-safe-test-password"
+      password: "A-safe-test-password1!"
     });
     expect(login.status).toBe(303);
     expect(login.headers.location).toBe("/convert");
@@ -327,10 +327,25 @@ describe("Move It application", () => {
     const response = await request(testApp())
       .post("/login")
       .type("form")
-      .send({ email: "alex@example.com", password: "a-safe-test-password" });
+      .send({ email: "alex@example.com", password: "A-safe-test-password1!" });
 
     expect(response.status).toBe(400);
     expect(response.text).toContain("@opencastsoftware.com");
+  });
+
+  it("anchors a short access-request password error to the password input", async () => {
+    const response = await request(testApp())
+      .post("/request-access")
+      .type("form")
+      .send({
+        displayName: "Alex",
+        email: "alex@opencastsoftware.com",
+        password: "too-short"
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain('href="#password"');
+    expect(response.text).toContain("Password must be at least 12 characters");
   });
 
   it("does not permit administrator access without the configured token", async () => {

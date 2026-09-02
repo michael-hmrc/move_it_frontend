@@ -23,14 +23,16 @@
             value: values.email,
             autocomplete: "email",
             label: { text: "Email address", classes: "govuk-label--m", isPageHeading: false },
-            errorMessage: { text: errorMessage } if errorMessage
+            errorMessage: { text: errorMessage } if errorField == "email"
           }) }}
           {{ govukInput({
             id: "password",
             name: "password",
             type: "password",
             autocomplete: "current-password",
-            label: { text: "Password", classes: "govuk-label--m", isPageHeading: false }
+            label: { text: "Password", classes: "govuk-label--m", isPageHeading: false },
+            hint: { text: "Use at least 12 characters, including an uppercase letter, number and symbol." },
+            errorMessage: { text: errorMessage } if errorField == "password"
           }) }}
           {{ govukButton({ text: "Sign in" }) }}
       </form>

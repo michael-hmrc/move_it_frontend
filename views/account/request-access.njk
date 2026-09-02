@@ -8,7 +8,7 @@
 {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
 <form action="/request-access" method="post" novalidate>
 {{ govukInput({ id: "displayName", name: "displayName", value: values.displayName, label: { text: "Display name", classes: "govuk-label--m" } }) }}
-{{ govukInput({ id: "email", name: "email", type: "email", value: values.email, autocomplete: "email", label: { text: "Opencast email address", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorMessage }) }}
-{{ govukInput({ id: "password", name: "password", type: "password", autocomplete: "new-password", label: { text: "Choose a password", classes: "govuk-label--m" }, hint: { text: "Use at least 12 characters." } }) }}
+{{ govukInput({ id: "email", name: "email", type: "email", value: values.email, autocomplete: "email", label: { text: "Opencast email address", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorField == "email" }) }}
+{{ govukInput({ id: "password", name: "password", type: "password", autocomplete: "new-password", label: { text: "Choose a password", classes: "govuk-label--m" }, hint: { text: "Use 12 or more characters, including an uppercase letter, number and symbol." }, errorMessage: { text: errorMessage } if errorField == "password" }) }}
 {{ govukButton({ text: "Request access" }) }}</form>
 </div></div>{% endblock %}
