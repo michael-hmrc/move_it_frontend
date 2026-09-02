@@ -100,6 +100,14 @@ function isAllowedEmail(email: string, allowedDomain: string) {
   return normaliseEmail(email).endsWith(`@${allowedDomain}`);
 }
 
+function isChangingAnswer(request: Request) {
+  return request.query.from === "check";
+}
+
+function journeyUrl(path: string, request: Request) {
+  return isChangingAnswer(request) ? `${path}?from=check` : path;
+}
+
 function requireAuthenticatedUser(request: Request, response: Response) {
   const user = journey(request).user;
 
@@ -211,7 +219,9 @@ export function createApp(
     if (!requireAuthenticatedUser(request, response)) return;
     response.render("journey/activity", {
       activities,
-      values: { activity: journey(request).activity }
+      values: { activity: journey(request).activity },
+      backHref: "/",
+      formAction: "/convert/activity"
     });
   });
 
@@ -220,7 +230,9 @@ export function createApp(
 
     response.render("journey/activity", {
       activities,
-      values: { activity: journey(request).activity }
+      values: { activity: journey(request).activity },
+      backHref: isChangingAnswer(request) ? "/convert/check" : "/convert",
+      formAction: journeyUrl("/convert/activity", request)
     });
   });
 
@@ -235,12 +247,16 @@ export function createApp(
         parsed.error,
         "activity",
         request.body,
-        { activities }
+        {
+          activities,
+          backHref: isChangingAnswer(request) ? "/convert/check" : "/convert",
+          formAction: journeyUrl("/convert/activity", request)
+        }
       );
     }
 
     journey(request).activity = parsed.data.activity;
-    return response.redirect(303, "/convert/intensity");
+    return response.redirect(303, isChangingAnswer(request) ? "/convert/check" : "/convert/intensity");
   });
 
   app.get("/convert/intensity", (request, response) => {
@@ -250,7 +266,9 @@ export function createApp(
     response.render("journey/intensity", {
       intensities,
       activityName: getActivity(journey(request).activity!).name,
-      values: { intensity: journey(request).intensity }
+      values: { intensity: journey(request).intensity },
+      backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/activity",
+      formAction: journeyUrl("/convert/intensity", request)
     });
   });
 
@@ -268,13 +286,15 @@ export function createApp(
         request.body,
         {
           intensities,
-          activityName: getActivity(journey(request).activity!).name
+          activityName: getActivity(journey(request).activity!).name,
+          backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/activity",
+          formAction: journeyUrl("/convert/intensity", request)
         }
       );
     }
 
     journey(request).intensity = parsed.data.intensity;
-    return response.redirect(303, "/convert/duration");
+    return response.redirect(303, isChangingAnswer(request) ? "/convert/check" : "/convert/duration");
   });
 
   app.get("/convert/duration", (request, response) => {
@@ -282,7 +302,9 @@ export function createApp(
     if (!requireJourneyValue(request, response, "intensity", "/convert/intensity")) return;
 
     response.render("journey/duration", {
-      values: { durationMinutes: journey(request).durationMinutes }
+      values: { durationMinutes: journey(request).durationMinutes },
+      backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/intensity",
+      formAction: journeyUrl("/convert/duration", request)
     });
   });
 
@@ -298,17 +320,49 @@ export function createApp(
         "journey/duration",
         parsed.error,
         "durationMinutes",
-        request.body
+        request.body,
+        {
+          backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/intensity",
+          formAction: journeyUrl("/convert/duration", request)
+        }
       );
     }
 
     const session = journey(request);
     session.durationMinutes = parsed.data.durationMinutes;
+    return response.redirect(303, "/convert/check");
+  });
+
+  app.get("/convert/check", (request, response) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    if (!requireJourneyValue(request, response, "activity", "/convert")) return;
+    if (!requireJourneyValue(request, response, "intensity", "/convert/activity")) return;
+    if (!requireJourneyValue(request, response, "durationMinutes", "/convert/duration")) return;
+
+    const session = journey(request);
     const result = convertActivityToSteps({
       displayName: user.displayName,
       activity: session.activity!,
       intensity: session.intensity!,
-      durationMinutes: session.durationMinutes
+      durationMinutes: session.durationMinutes!
+    });
+    response.render("journey/check", { result });
+  });
+
+  app.post("/convert/check", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    if (!requireJourneyValue(request, response, "activity", "/convert")) return;
+    if (!requireJourneyValue(request, response, "intensity", "/convert/activity")) return;
+    if (!requireJourneyValue(request, response, "durationMinutes", "/convert/duration")) return;
+
+    const session = journey(request);
+    const result = convertActivityToSteps({
+      displayName: user.displayName,
+      activity: session.activity!,
+      intensity: session.intensity!,
+      durationMinutes: session.durationMinutes!
     });
 
     try {

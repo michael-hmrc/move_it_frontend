@@ -7,7 +7,7 @@
 
 {% set pageTitle = ("Error: " if errors else "") + "What activity did you do? - Move It" %}
 
-{% block beforeContent %}{{ govukBackLink({ href: "/convert", text: "Back" }) }}{% endblock %}
+{% block beforeContent %}{{ govukBackLink({ href: backHref, text: "Back" }) }}{% endblock %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -25,7 +25,7 @@
         }), activityItems) %}
       {% endfor %}
 
-      <form action="/convert/activity" method="post" novalidate>
+      <form action="{{ formAction }}" method="post" novalidate>
         {{ govukSelect({
           id: "activity",
           name: "activity",

@@ -1,0 +1,43 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% set pageTitle = "Check your answers - Move It" %}
+
+{% block beforeContent %}{{ govukBackLink({ href: "/convert/duration", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Check your answers before submitting</h1>
+
+      {{ govukSummaryList({
+        rows: [
+          { key: { text: "Display name" }, value: { text: result.displayName } },
+          {
+            key: { text: "Activity" },
+            value: { text: result.activityName },
+            actions: { items: [{ href: "/convert/activity?from=check", text: "Change", visuallyHiddenText: "activity" }] }
+          },
+          {
+            key: { text: "Intensity" },
+            value: { text: result.intensity | capitalize },
+            actions: { items: [{ href: "/convert/intensity?from=check", text: "Change", visuallyHiddenText: "intensity" }] }
+          },
+          {
+            key: { text: "Duration" },
+            value: { text: result.durationMinutes + " minutes" },
+            actions: { items: [{ href: "/convert/duration?from=check", text: "Change", visuallyHiddenText: "duration" }] }
+          },
+          { key: { text: "Estimated steps" }, value: { text: result.estimatedSteps + " steps" } }
+        ]
+      }) }}
+
+      <form action="/convert/check" method="post">
+        {{ govukButton({ text: "Submit activity" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

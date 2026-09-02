@@ -7,7 +7,7 @@
 
 {% set pageTitle = ("Error: " if errors else "") + "How long did the activity last? - Move It" %}
 
-{% block beforeContent %}{{ govukBackLink({ href: "/convert/intensity", text: "Back" }) }}{% endblock %}
+{% block beforeContent %}{{ govukBackLink({ href: backHref, text: "Back" }) }}{% endblock %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -16,7 +16,7 @@
         {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
       {% endif %}
 
-      <form action="/convert/duration" method="post" novalidate>
+      <form action="{{ formAction }}" method="post" novalidate>
         {{ govukInput({
           id: "durationMinutes",
           name: "durationMinutes",
@@ -38,7 +38,7 @@
           errorMessage: { text: errorMessage } if errorMessage
         }) }}
 
-        {{ govukButton({ text: "Calculate steps" }) }}
+        {{ govukButton({ text: "Continue" }) }}
       </form>
     </div>
   </div>

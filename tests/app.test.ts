@@ -184,7 +184,22 @@ describe("Move It application", () => {
       .type("form")
       .send({ durationMinutes: "20" });
     expect(durationResponse.status).toBe(303);
-    expect(durationResponse.headers.location).toBe("/convert/result");
+    expect(durationResponse.headers.location).toBe("/convert/check");
+
+    const checkPage = await agent.get("/convert/check");
+    expect(checkPage.status).toBe(200);
+    expect(checkPage.text).toContain("Check your answers before submitting");
+    expect(checkPage.text).toContain("4200 steps");
+    expect(repository.save).not.toHaveBeenCalled();
+
+    const changeDurationPage = await agent.get("/convert/duration?from=check");
+    expect(changeDurationPage.status).toBe(200);
+    expect(changeDurationPage.text).toContain('href="/convert/check"');
+    expect(changeDurationPage.text).toContain('action="/convert/duration?from=check"');
+
+    const submission = await agent.post("/convert/check");
+    expect(submission.status).toBe(303);
+    expect(submission.headers.location).toBe("/convert/result");
 
     const resultPage = await agent.get("/convert/result");
     expect(resultPage.status).toBe(200);

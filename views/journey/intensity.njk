@@ -7,7 +7,7 @@
 
 {% set pageTitle = ("Error: " if errors else "") + "How intense was the activity? - Move It" %}
 
-{% block beforeContent %}{{ govukBackLink({ href: "/convert/activity", text: "Back" }) }}{% endblock %}
+{% block beforeContent %}{{ govukBackLink({ href: backHref, text: "Back" }) }}{% endblock %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -25,7 +25,7 @@
         }), intensityItems) %}
       {% endfor %}
 
-      <form action="/convert/intensity" method="post" novalidate>
+      <form action="{{ formAction }}" method="post" novalidate>
         {{ govukRadios({
           idPrefix: "intensity",
           name: "intensity",
