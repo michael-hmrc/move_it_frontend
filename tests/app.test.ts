@@ -22,6 +22,8 @@ const authentication: AuthenticationService = {
   }),
   requestAccess: vi.fn().mockResolvedValue(undefined),
   approveUser: vi.fn().mockResolvedValue(undefined),
+  deactivateUser: vi.fn().mockResolvedValue(undefined),
+  reactivateUser: vi.fn().mockResolvedValue(undefined),
   listUsers: vi.fn().mockResolvedValue([])
 };
 
@@ -382,5 +384,48 @@ describe("Move It application", () => {
       if (priorToken === undefined) delete process.env.ADMIN_ACCESS_TOKEN;
       else process.env.ADMIN_ACCESS_TOKEN = priorToken;
     }
+  });
+
+  it("lets an administrator deactivate an approved user", async () => {
+    const priorToken = process.env.ADMIN_ACCESS_TOKEN;
+    process.env.ADMIN_ACCESS_TOKEN = "test-admin-token";
+    vi.mocked(authentication.listUsers).mockResolvedValueOnce([{
+      id: "2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      email: "sam@opencastsoftware.com",
+      displayName: "Sam",
+      mustChangePassword: false,
+      status: "approved"
+    }]);
+    const agent = request.agent(testApp());
+
+    try {
+      await agent.post("/admin/login").type("form").send({ adminAccessToken: "test-admin-token" });
+      const page = await agent.get("/admin");
+      expect(page.text).toContain("Deactivate");
+      const deactivation = await agent.post("/admin/users/2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7/deactivate");
+      expect(deactivation.headers.location).toBe("/admin");
+      expect(authentication.deactivateUser).toHaveBeenCalledWith("2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7");
+    } finally {
+      if (priorToken === undefined) delete process.env.ADMIN_ACCESS_TOKEN;
+      else process.env.ADMIN_ACCESS_TOKEN = priorToken;
+    }
+  });
+
+  it("does not sign in a deactivated user", async () => {
+    vi.mocked(authentication.signIn).mockResolvedValueOnce({
+      id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      email: "alex@opencastsoftware.com",
+      displayName: "Alex",
+      mustChangePassword: false,
+      status: "deactivated"
+    });
+
+    const response = await request(testApp()).post("/login").type("form").send({
+      email: "alex@opencastsoftware.com",
+      password: "A-safe-test-password1!"
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.text).toContain("Your access is not available");
   });
 });

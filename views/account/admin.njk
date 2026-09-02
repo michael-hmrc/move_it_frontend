@@ -7,7 +7,18 @@
 <div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
   <h1 class="govuk-heading-xl">Access requests</h1>
   <p class="govuk-body">Approve only colleagues you have verified through a trusted channel.</p>
-  {% set rows = [] %}{% for user in users %}{% set action = '<form action="/admin/users/' + user.id + '/approve" method="post"><button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" type="submit">Approve</button></form>' if user.status == "pending" else "" %}{% set rows = (rows.push([{ text: user.displayName }, { text: user.email }, { text: user.status | capitalize }, { html: action }]), rows) %}{% endfor %}
+  {% set rows = [] %}
+  {% for user in users %}
+    {% set action = "" %}
+    {% if user.status == "pending" %}
+      {% set action = '<form action="/admin/users/' + user.id + '/approve" method="post"><button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" type="submit">Approve</button></form>' %}
+    {% elif user.status == "approved" %}
+      {% set action = '<form action="/admin/users/' + user.id + '/deactivate" method="post"><button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" type="submit">Deactivate</button></form>' %}
+    {% elif user.status == "deactivated" %}
+      {% set action = '<form action="/admin/users/' + user.id + '/reactivate" method="post"><button class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" type="submit">Reactivate</button></form>' %}
+    {% endif %}
+    {% set rows = (rows.push([{ text: user.displayName }, { text: user.email }, { text: user.status | capitalize }, { html: action }]), rows) %}
+  {% endfor %}
   {{ govukTable({ head: [{ text: "Display name" }, { text: "Email" }, { text: "Status" }, { text: "Action" }], rows: rows }) }}
 </div></div>
 {% endblock %}

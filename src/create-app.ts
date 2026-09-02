@@ -373,9 +373,10 @@ export function createApp(
 
     try {
       const user = await authentication.signIn(email, parsed.data.password);
-      if (user.status !== "approved") {
+      if (user.status === "pending") {
         return response.status(403).render("account/access-pending");
       }
+      if (user.status !== "approved") return response.status(403).render("account/access-unavailable");
       journey(request).user = user;
       return response.redirect(303, "/convert");
     } catch (error) {
@@ -429,6 +430,22 @@ export function createApp(
     if (!requireAdmin(request, response)) return;
     try {
       await authentication.approveUser(request.params.id);
+      return response.redirect(303, "/admin");
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/admin/users/:id/deactivate", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try {
+      await authentication.deactivateUser(request.params.id);
+      return response.redirect(303, "/admin");
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/admin/users/:id/reactivate", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try {
+      await authentication.reactivateUser(request.params.id);
       return response.redirect(303, "/admin");
     } catch (error) { return next(error); }
   });

@@ -5,13 +5,15 @@ export interface AuthenticatedUser {
   email: string;
   displayName: string;
   mustChangePassword: boolean;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "deactivated";
 }
 
 export interface AuthenticationService {
   signIn(email: string, password: string): Promise<AuthenticatedUser>;
   requestAccess(email: string, displayName: string, password: string): Promise<void>;
   approveUser(userId: string): Promise<void>;
+  deactivateUser(userId: string): Promise<void>;
+  reactivateUser(userId: string): Promise<void>;
   listUsers(): Promise<AuthenticatedUser[]>;
 }
 
@@ -20,6 +22,8 @@ class UnavailableAuthenticationService implements AuthenticationService {
   async signIn(): Promise<AuthenticatedUser> { return this.unavailable(); }
   async requestAccess(): Promise<void> { return this.unavailable(); }
   async approveUser(): Promise<void> { return this.unavailable(); }
+  async deactivateUser(): Promise<void> { return this.unavailable(); }
+  async reactivateUser(): Promise<void> { return this.unavailable(); }
   async listUsers(): Promise<AuthenticatedUser[]> { return this.unavailable(); }
 }
 
@@ -79,6 +83,16 @@ class SupabaseAuthenticationService implements AuthenticationService {
   async approveUser(userId: string): Promise<void> {
     const { error } = await this.client.from("app_users").update({ status: "approved" }).eq("id", userId);
     if (error) throw new Error(`Could not approve account: ${error.message}`);
+  }
+
+  async deactivateUser(userId: string): Promise<void> {
+    const { error } = await this.client.from("app_users").update({ status: "deactivated" }).eq("id", userId);
+    if (error) throw new Error(`Could not deactivate account: ${error.message}`);
+  }
+
+  async reactivateUser(userId: string): Promise<void> {
+    const { error } = await this.client.from("app_users").update({ status: "approved" }).eq("id", userId);
+    if (error) throw new Error(`Could not reactivate account: ${error.message}`);
   }
 
   async listUsers(): Promise<AuthenticatedUser[]> {

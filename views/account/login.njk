@@ -14,7 +14,6 @@
       {% if errors %}
         {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
       {% endif %}
-      <p class="govuk-body">Move It is for approved members. If you do not have an account, request access.</p>
       <form action="/login" method="post" novalidate>
           {{ govukInput({
             id: "email",
@@ -31,7 +30,6 @@
             type: "password",
             autocomplete: "current-password",
             label: { text: "Password", classes: "govuk-label--m", isPageHeading: false },
-            hint: { text: "Use at least 12 characters, including an uppercase letter, number and symbol." },
             errorMessage: { text: errorMessage } if errorField == "password"
           }) }}
           {{ govukButton({ text: "Sign in" }) }}
