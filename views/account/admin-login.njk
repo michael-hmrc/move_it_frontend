@@ -1,0 +1,14 @@
+{% extends "layouts/main.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% block content %}
+<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+  <h1 class="govuk-heading-xl">Administrator sign in</h1>
+  {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
+  <form action="/admin/login" method="post" novalidate>
+    {{ govukInput({ id: "adminAccessToken", name: "adminAccessToken", type: "password", autocomplete: "current-password", label: { text: "Admin access token", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorMessage }) }}
+    {{ govukButton({ text: "Sign in" }) }}
+  </form>
+</div></div>
+{% endblock %}

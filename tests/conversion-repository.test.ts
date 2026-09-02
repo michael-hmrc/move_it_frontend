@@ -43,7 +43,7 @@ describe("conversion repository", () => {
   it("uses an inert repository when Supabase is not configured", async () => {
     const repository = createConversionRepository({} as NodeJS.ProcessEnv);
 
-    await expect(repository.save(result)).resolves.toBeUndefined();
+    await expect(repository.save(result, "user-id")).resolves.toBeUndefined();
     await expect(repository.listMonthly("2026-08-01")).resolves.toEqual([]);
     expect(createClient).not.toHaveBeenCalled();
   });
@@ -51,7 +51,7 @@ describe("conversion repository", () => {
   it("stores the server-side fields expected by Supabase", async () => {
     const repository = configuredRepository();
 
-    await repository.save(result);
+    await repository.save(result, "user-id");
 
     expect(createClient).toHaveBeenCalledWith(
       "https://example.supabase.co",
@@ -60,6 +60,7 @@ describe("conversion repository", () => {
     );
     expect(supabase.from).toHaveBeenCalledWith("conversion_records");
     expect(supabase.insert).toHaveBeenCalledWith({
+      user_id: "user-id",
       display_name: "Alex",
       activity: "football",
       intensity: "moderate",
@@ -93,7 +94,7 @@ describe("conversion repository", () => {
 
   it("surfaces Supabase write and read errors", async () => {
     supabase.insert.mockResolvedValueOnce({ error: { message: "write failed" } });
-    await expect(configuredRepository().save(result)).rejects.toThrow(
+    await expect(configuredRepository().save(result, "user-id")).rejects.toThrow(
       "Could not save conversion: write failed"
     );
 

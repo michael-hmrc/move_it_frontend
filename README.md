@@ -79,9 +79,22 @@ function from the server.
 
 The scoreboard groups records by display name for the current UTC calendar
 month, ranks total estimated steps, and shows the number of activities. Display
-names are public. This first version does not authenticate ownership of a name,
-so Supabase Auth should be added before using the scoreboard for a trusted
-competition.
+names are public, but submissions are associated with a verified Supabase Auth
+user ID. Only email addresses at `AUTH_ALLOWED_EMAIL_DOMAIN` can sign in.
+
+## Configure invite-only accounts
+
+Move It uses administrator-approved Supabase Auth accounts. Add the following values:
+
+```dotenv
+AUTH_ALLOWED_EMAIL_DOMAIN=opencastsoftware.com
+ADMIN_ACCESS_TOKEN=a-separate-long-random-value
+```
+
+Set `ADMIN_ACCESS_TOKEN` to a separate long random value. Users request access
+at `/request-access` and choose their own password. An administrator visits
+`/admin/login` and approves verified requests. Only approved accounts can use
+the activity journey. Do not enable public Supabase sign-up for this application.
 
 ## Deploy to Vercel
 

@@ -7,6 +7,7 @@ import express, {
 import nunjucks from "nunjucks";
 import path from "node:path";
 import type { ZodError } from "zod";
+import { timingSafeEqual } from "node:crypto";
 import {
   activities,
   getActivity,
@@ -24,8 +25,14 @@ import {
   activitySchema,
   displayNameSchema,
   durationSchema,
-  intensitySchema
+  emailSchema,
+  intensitySchema,
+  passwordSchema
 } from "./domain/validation.js";
+import {
+  createAuthenticationService,
+  type AuthenticationService
+} from "./persistence/authentication.js";
 import {
   createConversionRepository,
   sampleScoreboardEntries,
@@ -38,9 +45,13 @@ interface JourneySession {
   intensity?: Intensity;
   durationMinutes?: number;
   result?: ConversionResult;
-  mockUser?: {
+  user?: {
+    id: string;
     displayName: string;
+    email: string;
+    mustChangePassword: boolean;
   };
+  isAdmin?: boolean;
 }
 
 function journey(request: Request): JourneySession {
@@ -57,12 +68,15 @@ function renderFieldError(
   additionalContext: Record<string, unknown> = {}
 ) {
   const message = error.issues[0]?.message ?? "Enter a valid value";
+  const issueField = error.issues[0]?.path[0];
+  const errorField = typeof issueField === "string" ? issueField : field;
 
   return response.status(400).render(view, {
     ...additionalContext,
     values,
     errorMessage: message,
-    errors: [{ text: message, href: `#${field}` }]
+    errorField,
+    errors: [{ text: message, href: `#${errorField}` }]
   });
 }
 
@@ -80,16 +94,62 @@ function requireJourneyValue(
   return true;
 }
 
+function normaliseEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function isAllowedEmail(email: string, allowedDomain: string) {
+  return normaliseEmail(email).endsWith(`@${allowedDomain}`);
+}
+
+function requireAuthenticatedUser(request: Request, response: Response) {
+  const user = journey(request).user;
+
+  if (!user) {
+    response.redirect(303, "/login");
+    return undefined;
+  }
+
+  return user;
+}
+
+function secretsMatch(value: string, expected: string) {
+  const supplied = Buffer.from(value);
+  const configured = Buffer.from(expected);
+  return supplied.length === configured.length && timingSafeEqual(supplied, configured);
+}
+
+function requireAdmin(request: Request, response: Response) {
+  if (!journey(request).isAdmin) {
+    response.redirect(303, "/admin/login");
+    return false;
+  }
+  return true;
+}
+
 export function createApp(
-  repository: ConversionRepository = createConversionRepository()
+  repository: ConversionRepository = createConversionRepository(),
+  authentication: AuthenticationService = createAuthenticationService()
 ) {
   const app = express();
   const projectRoot = process.cwd();
   const sessionSecret = process.env.SESSION_SECRET;
   const isProduction = process.env.NODE_ENV === "production";
+  const allowedEmailDomain = (process.env.AUTH_ALLOWED_EMAIL_DOMAIN ?? "opencastsoftware.com")
+    .trim()
+    .toLowerCase();
+  const adminAccessToken = process.env.ADMIN_ACCESS_TOKEN;
 
   if (!sessionSecret && isProduction) {
     throw new Error("SESSION_SECRET must be configured in production");
+  }
+
+  if (!allowedEmailDomain || allowedEmailDomain.includes("@")) {
+    throw new Error("AUTH_ALLOWED_EMAIL_DOMAIN must be a domain, without @");
+  }
+
+  if (isProduction && !adminAccessToken) {
+    throw new Error("ADMIN_ACCESS_TOKEN must be configured in production");
   }
 
   nunjucks.configure(
@@ -125,7 +185,7 @@ export function createApp(
   );
 
   app.use((request, response, next) => {
-    response.locals.currentUser = journey(request).mockUser;
+    response.locals.currentUser = journey(request).user;
     response.locals.currentSection = request.path === "/"
       ? "home"
       : request.path.startsWith("/login") || request.path.startsWith("/signup")
@@ -149,12 +209,14 @@ export function createApp(
   });
 
   app.get("/convert", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     response.render("index", {
       values: { displayName: journey(request).displayName }
     });
   });
 
   app.post("/convert/name", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     const parsed = displayNameSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -162,10 +224,12 @@ export function createApp(
     }
 
     journey(request).displayName = parsed.data.displayName;
+    journey(request).user!.displayName = parsed.data.displayName;
     return response.redirect(303, "/convert/activity");
   });
 
   app.get("/convert/activity", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     if (!requireJourneyValue(request, response, "displayName", "/convert")) return;
 
     response.render("journey/activity", {
@@ -175,6 +239,7 @@ export function createApp(
   });
 
   app.post("/convert/activity", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     if (!requireJourneyValue(request, response, "displayName", "/convert")) return;
     const parsed = activitySchema.safeParse(request.body);
 
@@ -194,6 +259,7 @@ export function createApp(
   });
 
   app.get("/convert/intensity", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     if (!requireJourneyValue(request, response, "activity", "/convert/activity")) return;
 
     response.render("journey/intensity", {
@@ -204,6 +270,7 @@ export function createApp(
   });
 
   app.post("/convert/intensity", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     if (!requireJourneyValue(request, response, "activity", "/convert/activity")) return;
     const parsed = intensitySchema.safeParse(request.body);
 
@@ -226,6 +293,7 @@ export function createApp(
   });
 
   app.get("/convert/duration", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     if (!requireJourneyValue(request, response, "intensity", "/convert/intensity")) return;
 
     response.render("journey/duration", {
@@ -234,6 +302,8 @@ export function createApp(
   });
 
   app.post("/convert/duration", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
     if (!requireJourneyValue(request, response, "intensity", "/convert/intensity")) return;
     const parsed = durationSchema.safeParse(request.body);
 
@@ -257,7 +327,7 @@ export function createApp(
     });
 
     try {
-      await repository.save(result);
+      await repository.save(result, user.id);
       session.result = result;
       return response.redirect(303, "/convert/result");
     } catch (error) {
@@ -266,13 +336,14 @@ export function createApp(
   });
 
   app.get("/convert/result", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     if (!requireJourneyValue(request, response, "result", "/convert")) return;
     response.render("result", { result: journey(request).result });
   });
 
   app.get("/convert/reset", (request, response) => {
-    const currentUser = journey(request).mockUser;
-    request.session = currentUser ? { mockUser: currentUser } : {};
+    const currentUser = journey(request).user;
+    request.session = currentUser ? { user: currentUser } : {};
     response.redirect(303, "/convert");
   });
 
@@ -284,18 +355,103 @@ export function createApp(
     response.render("account/login");
   });
 
-  app.post("/login", (request, response) => {
-    journey(request).mockUser = { displayName: "Demo user" };
-    response.redirect(303, "/");
+  app.post("/login", async (request, response, next) => {
+    const parsed = emailSchema.and(passwordSchema).safeParse(request.body);
+
+    if (!parsed.success) {
+      return renderFieldError(response, "account/login", parsed.error, "email", request.body);
+    }
+
+    const email = normaliseEmail(parsed.data.email);
+    if (!isAllowedEmail(email, allowedEmailDomain)) {
+      return response.status(400).render("account/login", {
+        values: request.body,
+        errorMessage: `Enter an email address ending in @${allowedEmailDomain}`,
+        errors: [{ text: `Enter an email address ending in @${allowedEmailDomain}`, href: "#email" }]
+      });
+    }
+
+    try {
+      const user = await authentication.signIn(email, parsed.data.password);
+      if (user.status === "pending") {
+        return response.status(403).render("account/access-pending");
+      }
+      if (user.status !== "approved") return response.status(403).render("account/access-unavailable");
+      journey(request).user = user;
+      return response.redirect(303, "/convert");
+    } catch (error) {
+      return response.status(401).render("account/login", {
+        values: { email },
+        errorMessage: error instanceof Error ? error.message : "Could not sign in",
+        errors: [{ text: error instanceof Error ? error.message : "Could not sign in", href: "#email" }]
+      });
+    }
   });
 
   app.post("/logout", (request, response) => {
-    delete journey(request).mockUser;
+    request.session = null;
     response.redirect(303, "/");
   });
 
+  app.get("/request-access", (_request, response) => response.render("account/request-access"));
+  app.post("/request-access", async (request, response, next) => {
+    const parsed = emailSchema.and(displayNameSchema).and(passwordSchema).safeParse(request.body);
+    if (!parsed.success) return renderFieldError(response, "account/request-access", parsed.error, "email", request.body);
+    const email = normaliseEmail(parsed.data.email);
+    if (!isAllowedEmail(email, allowedEmailDomain)) {
+      return response.status(400).render("account/request-access", { values: request.body, errorMessage: `Enter an email address ending in @${allowedEmailDomain}`, errors: [{ text: `Enter an email address ending in @${allowedEmailDomain}`, href: "#email" }] });
+    }
+    try {
+      await authentication.requestAccess(email, parsed.data.displayName, parsed.data.password);
+      return response.render("account/access-requested");
+    } catch (error) { return next(error); }
+  });
+
+  app.get("/admin/login", (_request, response) => response.render("account/admin-login"));
+  app.post("/admin/login", (request, response) => {
+    const token = typeof request.body.adminAccessToken === "string" ? request.body.adminAccessToken : "";
+    if (!adminAccessToken || !secretsMatch(token, adminAccessToken)) {
+      return response.status(401).render("account/admin-login", {
+        errorMessage: "Enter a valid admin access token",
+        errors: [{ text: "Enter a valid admin access token", href: "#adminAccessToken" }]
+      });
+    }
+    journey(request).isAdmin = true;
+    return response.redirect(303, "/admin");
+  });
+
+  app.get("/admin", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try { return response.render("account/admin", { users: await authentication.listUsers() }); }
+    catch (error) { return next(error); }
+  });
+
+  app.post("/admin/users/:id/approve", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try {
+      await authentication.approveUser(request.params.id);
+      return response.redirect(303, "/admin");
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/admin/users/:id/deactivate", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try {
+      await authentication.deactivateUser(request.params.id);
+      return response.redirect(303, "/admin");
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/admin/users/:id/reactivate", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try {
+      await authentication.reactivateUser(request.params.id);
+      return response.redirect(303, "/admin");
+    } catch (error) { return next(error); }
+  });
+
   app.get("/signup", (_request, response) => {
-    response.render("account/signup");
+    response.redirect(303, "/login");
   });
 
   app.get("/conversions", (_request, response) => {
@@ -309,7 +465,8 @@ export function createApp(
     response.render("conversions", { conversionRows });
   });
 
-  app.get("/scoreboard", async (_request, response, next) => {
+  app.get("/scoreboard", async (request, response, next) => {
+    if (!requireAuthenticatedUser(request, response)) return;
     const now = new Date();
     const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
     const monthLabel = new Intl.DateTimeFormat("en-GB", {
