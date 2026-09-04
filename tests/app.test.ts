@@ -77,6 +77,16 @@ describe("Move It application", () => {
     }
   });
 
+  it("renders an accessible mobile bottom navigation", async () => {
+    const response = await request(createApp()).get("/");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('class="app-mobile-navigation"');
+    expect(response.text).toContain('aria-label="Primary navigation"');
+    expect(response.text).toContain("app-mobile-navigation__link--current");
+    expect(response.text).toContain("How it works");
+  });
+
   it("starts the conversion with the activity question and uses the account display name", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);

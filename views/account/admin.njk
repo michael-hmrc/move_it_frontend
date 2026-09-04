@@ -19,6 +19,8 @@
     {% endif %}
     {% set rows = (rows.push([{ text: user.displayName }, { text: user.email }, { text: user.status | capitalize }, { html: action }]), rows) %}
   {% endfor %}
-  {{ govukTable({ head: [{ text: "Display name" }, { text: "Email" }, { text: "Status" }, { text: "Action" }], rows: rows }) }}
+  <div class="app-table-scroll app-table-scroll--admin" role="region" aria-label="User access requests" tabindex="0">
+    {{ govukTable({ head: [{ text: "Display name" }, { text: "Email" }, { text: "Status" }, { text: "Action" }], rows: rows }) }}
+  </div>
 </div></div>
 {% endblock %}

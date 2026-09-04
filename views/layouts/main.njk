@@ -81,6 +81,29 @@
       }
     ]
   }) }}
+
+  <nav class="app-mobile-navigation" aria-label="Primary navigation">
+    <a class="app-mobile-navigation__link{% if currentSection == 'home' %} app-mobile-navigation__link--current{% endif %}" href="/"{% if currentSection == 'home' %} aria-current="page"{% endif %}>
+      <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8Z"/></svg>
+      <span>Home</span>
+    </a>
+    <a class="app-mobile-navigation__link{% if currentSection == 'convert' %} app-mobile-navigation__link--current{% endif %}" href="/convert"{% if currentSection == 'convert' %} aria-current="page"{% endif %}>
+      <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Submit</span>
+    </a>
+    <a class="app-mobile-navigation__link{% if currentSection == 'conversions' %} app-mobile-navigation__link--current{% endif %}" href="/conversions"{% if currentSection == 'conversions' %} aria-current="page"{% endif %}>
+      <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm3 4h8M8 12h3m3 0h2m-8 4h3m3 0h2"/></svg>
+      <span>Guide</span>
+    </a>
+    <a class="app-mobile-navigation__link{% if currentSection == 'scoreboard' %} app-mobile-navigation__link--current{% endif %}" href="/scoreboard"{% if currentSection == 'scoreboard' %} aria-current="page"{% endif %}>
+      <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-6h4v6H5Zm5 0V9h4v11h-4Zm5 0V4h4v16h-4Z"/></svg>
+      <span>Scores</span>
+    </a>
+    <a class="app-mobile-navigation__link{% if currentSection == 'about' %} app-mobile-navigation__link--current{% endif %}" href="/about"{% if currentSection == 'about' %} aria-current="page"{% endif %}>
+      <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg>
+      <span>How it works</span>
+    </a>
+  </nav>
 {% endblock %}
 
 {% block footer %}

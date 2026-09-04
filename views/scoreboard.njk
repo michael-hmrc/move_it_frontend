@@ -27,16 +27,18 @@
           ]), rows) %}
         {% endfor %}
 
-        {{ govukTable({
-          firstCellIsHeader: false,
-          head: [
-            { text: "Rank", format: "numeric" },
-            { text: "Display name" },
-            { text: "Estimated steps", format: "numeric" },
-            { text: "Activities", format: "numeric" }
-          ],
-          rows: rows
-        }) }}
+        <div class="app-table-scroll" role="region" aria-label="Monthly scoreboard" tabindex="0">
+          {{ govukTable({
+            firstCellIsHeader: false,
+            head: [
+              { text: "Rank", format: "numeric" },
+              { text: "Display name" },
+              { text: "Estimated steps", format: "numeric" },
+              { text: "Activities", format: "numeric" }
+            ],
+            rows: rows
+          }) }}
+        </div>
       {% else %}
         <p class="govuk-body-l">There are no recorded activities this month yet.</p>
       {% endif %}

@@ -25,18 +25,20 @@
         ]), rows) %}
       {% endfor %}
 
-      {{ govukTable({
-        caption: "Estimated steps for 60 minutes of activity",
-        captionClasses: "govuk-table__caption--m",
-        firstCellIsHeader: true,
-        head: [
-          { text: "Activity" },
-          { text: "Light intensity", format: "numeric" },
-          { text: "Moderate intensity", format: "numeric" },
-          { text: "Vigorous intensity", format: "numeric" }
-        ],
-        rows: rows
-      }) }}
+      <div class="app-table-scroll" role="region" aria-label="Activity conversion estimates" tabindex="0">
+        {{ govukTable({
+          caption: "Estimated steps for 60 minutes of activity",
+          captionClasses: "govuk-table__caption--m",
+          firstCellIsHeader: true,
+          head: [
+            { text: "Activity" },
+            { text: "Light intensity", format: "numeric" },
+            { text: "Moderate intensity", format: "numeric" },
+            { text: "Vigorous intensity", format: "numeric" }
+          ],
+          rows: rows
+        }) }}
+      </div>
 
       {{ govukButton({ text: "Submit your own activity", href: "/convert/reset" }) }}
     </div>
