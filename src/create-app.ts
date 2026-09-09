@@ -83,6 +83,29 @@ function renderFieldError(
   });
 }
 
+function renderFieldErrors(
+  response: Response,
+  view: string,
+  error: ZodError,
+  fields: string[],
+  values: Record<string, unknown> = {}
+) {
+  const fieldErrors: Record<string, string> = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path[0];
+    if (typeof field === "string" && fields.includes(field) && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  const errors = fields
+    .filter((field) => fieldErrors[field])
+    .map((field) => ({ text: fieldErrors[field], href: `#${field}` }));
+
+  return response.status(400).render(view, { values, fieldErrors, errors });
+}
+
 function requireJourneyValue(
   request: Request,
   response: Response,
@@ -512,7 +535,13 @@ export function createApp(
     const parsed = emailSchema.and(signInPasswordSchema).safeParse(request.body);
 
     if (!parsed.success) {
-      return renderFieldError(response, "account/login", parsed.error, "email", request.body);
+      return renderFieldErrors(
+        response,
+        "account/login",
+        parsed.error,
+        ["email", "password"],
+        request.body
+      );
     }
 
     const email = normaliseEmail(parsed.data.email);
@@ -541,7 +570,15 @@ export function createApp(
   app.get("/request-access", (_request, response) => response.render("account/request-access"));
   app.post("/request-access", async (request, response, next) => {
     const parsed = emailSchema.and(displayNameSchema).and(passwordSchema).safeParse(request.body);
-    if (!parsed.success) return renderFieldError(response, "account/request-access", parsed.error, "email", request.body);
+    if (!parsed.success) {
+      return renderFieldErrors(
+        response,
+        "account/request-access",
+        parsed.error,
+        ["displayName", "email", "password"],
+        request.body
+      );
+    }
     const email = normaliseEmail(parsed.data.email);
     if (!isAllowedEmail(email, allowedEmailDomain)) {
       return response.render("account/access-requested");
@@ -553,8 +590,7 @@ export function createApp(
       if (error instanceof DisplayNameTakenError) {
         return response.status(400).render("account/request-access", {
           values: { displayName: parsed.data.displayName, email },
-          errorMessage: error.message,
-          errorField: "displayName",
+          fieldErrors: { displayName: error.message },
           errors: [{ text: error.message, href: "#displayName" }]
         });
       }

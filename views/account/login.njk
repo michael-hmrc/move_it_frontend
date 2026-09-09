@@ -7,6 +7,8 @@
 {% from "govuk/components/password-input/macro.njk" import govukPasswordInput %}
 
 {% set pageTitle = ("Error: " if errors else "") + "Sign in - Move It" %}
+{% set emailError = fieldErrors.email if fieldErrors else (errorMessage if errorField == "email" else null) %}
+{% set passwordError = fieldErrors.password if fieldErrors else (errorMessage if errorField == "password" else null) %}
 
 {% block beforeContent %}<a class="govuk-back-link" href="/" onclick="history.back(); return false;">Back</a>{% endblock %}
 
@@ -25,14 +27,14 @@
             value: values.email,
             autocomplete: "email",
             label: { text: "Email address", classes: "govuk-label--m", isPageHeading: false },
-            errorMessage: { text: errorMessage } if errorField == "email"
+            errorMessage: { text: emailError } if emailError
           }) }}
           {{ govukPasswordInput({
             id: "password",
             name: "password",
             autocomplete: "current-password",
             label: { text: "Password", classes: "govuk-label--m", isPageHeading: false },
-            errorMessage: { text: errorMessage } if errorField == "password",
+            errorMessage: { text: passwordError } if passwordError,
             button: { classes: "app-password-toggle" }
           }) }}
           {{ govukButton({ text: "Sign in" }) }}

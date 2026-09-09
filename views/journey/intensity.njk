@@ -28,7 +28,7 @@
 
       {% set intensityInset %}
         {{ govukInsetText({
-          text: "Intensity is self declared but we trust you to be honest ;)"
+          text: "Intensity varies and is different for everyone but we trust your judgement."
         }) }}
       {% endset %}
 
@@ -38,7 +38,7 @@
           name: "intensity",
           fieldset: {
             legend: {
-              text: "How intense was your " + (activityName | lower) + " activity" + "?",
+              text: "How intense was your " + (activityName | lower) + " session" + "?",
               classes: "govuk-fieldset__legend--xl",
               isPageHeading: true
             }

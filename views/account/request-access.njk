@@ -8,8 +8,8 @@
 <h1 class="govuk-heading-xl">Request access</h1><p class="govuk-body">An administrator will review your request before you can use Move It.</p>
 {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
 <form action="/request-access" method="post" novalidate>
-{{ govukInput({ id: "displayName", name: "displayName", value: values.displayName, label: { text: "Display name", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorField == "displayName" }) }}
-{{ govukInput({ id: "email", name: "email", type: "email", value: values.email, autocomplete: "email", label: { text: "Email address", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorField == "email" }) }}
-{{ govukPasswordInput({ id: "password", name: "password", autocomplete: "new-password", label: { text: "Choose a password", classes: "govuk-label--m" }, hint: { text: "Use 12 or more characters, including an uppercase letter, number and symbol." }, errorMessage: { text: errorMessage } if errorField == "password", button: { classes: "app-password-toggle" } }) }}
+{{ govukInput({ id: "displayName", name: "displayName", value: values.displayName, label: { text: "Display name", classes: "govuk-label--m" }, errorMessage: { text: fieldErrors.displayName } if fieldErrors.displayName }) }}
+{{ govukInput({ id: "email", name: "email", type: "email", value: values.email, autocomplete: "email", label: { text: "Email address", classes: "govuk-label--m" }, errorMessage: { text: fieldErrors.email } if fieldErrors.email }) }}
+{{ govukPasswordInput({ id: "password", name: "password", autocomplete: "new-password", label: { text: "Choose a password", classes: "govuk-label--m" }, hint: { text: "Use 12 or more characters, including an uppercase letter, number and symbol." }, errorMessage: { text: fieldErrors.password } if fieldErrors.password, button: { classes: "app-password-toggle" } }) }}
 {{ govukButton({ text: "Request access" }) }}</form>
 </div></div>{% endblock %}

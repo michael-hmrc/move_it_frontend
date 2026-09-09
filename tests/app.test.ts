@@ -123,6 +123,14 @@ describe("Move It application", () => {
     expect(response.text).toContain("height:8px");
   });
 
+  it("serves the GOV.UK JavaScript used by interactive components", async () => {
+    const response = await request(createApp()).get("/assets/javascripts/govuk-frontend.min.js");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("javascript");
+    expect(response.text).toContain("PasswordInput");
+  });
+
   it("validates activity, intensity and duration values", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);
@@ -576,6 +584,39 @@ describe("Move It application", () => {
     expect(response.text).not.toContain('href="#password"');
     expect(response.text).not.toContain("Password must be at least");
     expect(response.text).not.toContain("Password must include");
+  });
+
+  it("shows all sign-in validation errors at once", async () => {
+    const response = await request(testApp()).post("/login").type("form").send({
+      email: "",
+      password: ""
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain('href="#email"');
+    expect(response.text).toContain('href="#password"');
+    expect(response.text).toContain('id="email-error"');
+    expect(response.text).toContain('id="password-error"');
+    expect(response.text).toContain("Enter an email address");
+    expect(response.text).toContain("Enter your password");
+    expect(authentication.signIn).not.toHaveBeenCalled();
+  });
+
+  it("shows all access-request validation errors at once", async () => {
+    const response = await request(testApp()).post("/request-access").type("form").send({
+      displayName: "",
+      email: "",
+      password: ""
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain('href="#displayName"');
+    expect(response.text).toContain('href="#email"');
+    expect(response.text).toContain('href="#password"');
+    expect(response.text).toContain('id="displayName-error"');
+    expect(response.text).toContain('id="email-error"');
+    expect(response.text).toContain('id="password-error"');
+    expect(authentication.requestAccess).not.toHaveBeenCalled();
   });
 
   it("anchors a short access-request password error to the password input", async () => {
