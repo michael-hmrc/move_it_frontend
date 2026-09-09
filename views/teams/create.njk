@@ -1,0 +1,31 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% set pageTitle = ("Error: " if errors else "") + "Create a team - Move It" %}
+{% block beforeContent %}{{ govukBackLink({ href: "/teams", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Create a team</h1>
+      <p class="govuk-body">Creating a team makes you its first member. Teams can have up to 5 members.</p>
+
+      {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
+
+      <form action="/teams/create" method="post" novalidate>
+        {{ govukInput({
+          id: "teamName",
+          name: "teamName",
+          value: values.teamName,
+          label: { text: "Team name", classes: "govuk-label--m" },
+          errorMessage: { text: fieldErrors.teamName } if fieldErrors.teamName
+        }) }}
+        {{ govukButton({ text: "Create team" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

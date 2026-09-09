@@ -23,9 +23,11 @@ function teamsWith(overrides: Partial<TeamRepository> = {}): TeamRepository {
   return {
     getOverview: vi.fn().mockResolvedValue({ invitations: [] }),
     listAll: vi.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue(undefined),
     create: vi.fn().mockResolvedValue(undefined),
     invite: vi.fn().mockResolvedValue(undefined),
     respondToInvitation: vi.fn().mockResolvedValue(undefined),
+    leave: vi.fn().mockResolvedValue(undefined),
     disband: vi.fn().mockResolvedValue(undefined),
     ...overrides
   };
@@ -481,13 +483,21 @@ describe("Move It application", () => {
 
     const page = await agent.get("/teams");
     expect(page.status).toBe(200);
+    expect(page.text).toContain("<h1 class=\"govuk-heading-xl\">Teams</h1>");
     expect(page.text).toContain("Create a team");
-    expect(page.text).toContain('href="/teams/all"');
+    expect(page.text).toContain('href="/teams/create"');
+    expect(page.text).not.toContain('action="/teams/create"');
     expect(page.text).toContain('href="/teams" aria-current="page"');
+
+    const createPage = await agent.get("/teams/create");
+    expect(createPage.status).toBe(200);
+    expect(createPage.text).toContain("Creating a team makes you its first member");
+    expect(createPage.text).toContain('action="/teams/create"');
+    expect(createPage.text).toContain('id="teamName"');
 
     const response = await agent.post("/teams/create").type("form").send({ teamName: "Movers" });
     expect(response.status).toBe(303);
-    expect(response.headers.location).toBe("/teams");
+    expect(response.headers.location).toBe("/teams/manage");
     expect(teamRepository.create).toHaveBeenCalledWith(
       "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
       "Movers"
@@ -512,18 +522,38 @@ describe("Move It application", () => {
     const agent = request.agent(testApp(repositoryWith(), teamRepository));
     await signIn(agent);
 
-    const page = await agent.get("/teams");
+    const directory = await agent.get("/teams");
+    expect(directory.text).toContain('href="/teams/manage"');
+
+    const page = await agent.get("/teams/manage");
+    expect(page.text).toContain("Manage your team");
     expect(page.text).toContain("Movers");
     expect(page.text).toContain("Alex");
     expect(page.text).toContain("Sam");
     expect(page.text).toContain("Send invitation");
+    expect(page.text).toContain('href="/teams/leave"');
     expect(page.text).toContain('href="/teams/disband"');
+
+    const createPage = await agent.get("/teams/create");
+    expect(createPage.status).toBe(303);
+    expect(createPage.headers.location).toBe("/teams/manage");
 
     const invitation = await agent.post("/teams/invite").type("form").send({ displayName: "Morgan" });
     expect(invitation.status).toBe(303);
     expect(teamRepository.invite).toHaveBeenCalledWith(
       "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
       "Morgan"
+    );
+
+    const leaveConfirmation = await agent.get("/teams/leave");
+    expect(leaveConfirmation.status).toBe(200);
+    expect(leaveConfirmation.text).toContain("Leave Movers?");
+    expect(leaveConfirmation.text).toContain("submitted activities will not be deleted");
+    const leave = await agent.post("/teams/leave");
+    expect(leave.status).toBe(303);
+    expect(leave.headers.location).toBe("/teams");
+    expect(teamRepository.leave).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7"
     );
 
     const confirmation = await agent.get("/teams/disband");
@@ -545,7 +575,10 @@ describe("Move It application", () => {
     const agent = request.agent(testApp(repositoryWith(), teamRepository));
     await signIn(agent);
 
-    const page = await agent.get("/teams");
+    const directory = await agent.get("/teams");
+    expect(directory.text).toContain("View team invitations");
+
+    const page = await agent.get("/teams/manage");
     expect(page.text).toContain("Movers</strong> has invited you to join");
 
     await agent.post("/teams/invitations/invitation-id/accept");
@@ -564,23 +597,45 @@ describe("Move It application", () => {
   });
 
   it("shows all teams without exposing member email addresses", async () => {
+    const teamId = "13845b5d-e982-4c7d-906c-9c32ed90d810";
     const teamRepository = teamsWith({
       listAll: vi.fn().mockResolvedValue([
-        { id: "team-1", name: "Movers", memberCount: 3 },
-        { id: "team-2", name: "Steppers", memberCount: 5 }
-      ])
+        { id: teamId, name: "Movers", memberCount: 3 },
+        { id: "01e770a7-74c9-4bb9-b63c-bd6c4e00de88", name: "Steppers", memberCount: 5 }
+      ]),
+      findById: vi.fn().mockResolvedValue({
+        id: teamId,
+        name: "Movers",
+        members: [
+          { id: "member-1", displayName: "Alex" },
+          { id: "member-2", displayName: "Sam" }
+        ]
+      })
     });
     const agent = request.agent(testApp(repositoryWith(), teamRepository));
     await signIn(agent);
 
-    const response = await agent.get("/teams/all");
+    const response = await agent.get("/teams");
     expect(response.status).toBe(200);
-    expect(response.text).toContain("All teams");
+    expect(response.text).toContain("Teams");
     expect(response.text).toContain("Movers");
     expect(response.text).toContain("3 of 5");
     expect(response.text).toContain("Steppers");
     expect(response.text).toContain("5 of 5");
+    expect(response.text).toContain(`href="/teams/${teamId}"`);
+    expect(response.text).toContain("View<span class=\"govuk-visually-hidden\"> Movers team members</span>");
     expect(response.text).not.toContain("@opencastsoftware.com");
+
+    const teamPage = await agent.get(`/teams/${teamId}`);
+    expect(teamPage.status).toBe(200);
+    expect(teamPage.text).toContain("<h1 class=\"govuk-heading-xl\">Movers</h1>");
+    expect(teamPage.text).toContain("Alex");
+    expect(teamPage.text).toContain("Sam");
+    expect(teamPage.text).not.toContain("@opencastsoftware.com");
+    expect(teamRepository.findById).toHaveBeenCalledWith(teamId);
+
+    const removedRoute = await agent.get("/teams/all");
+    expect(removedRoute.status).toBe(404);
   });
 
   it("requires sign-in to view teams", async () => {
@@ -588,6 +643,10 @@ describe("Move It application", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.location).toBe("/login");
+
+    const teamResponse = await request(testApp()).get("/teams/13845b5d-e982-4c7d-906c-9c32ed90d810");
+    expect(teamResponse.status).toBe(303);
+    expect(teamResponse.headers.location).toBe("/login");
   });
 
   it("shows a signed-in user their submitted activities", async () => {

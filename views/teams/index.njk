@@ -4,17 +4,17 @@
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
-{% set pageTitle = ("Error: " if errors else "") + "Teams - Move It" %}
+{% set pageTitle = ("Error: " if errors else "") + "Manage your team - Move It" %}
+{% block beforeContent %}{{ govukBackLink({ href: "/teams", text: "Back" }) }}{% endblock %}
 
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
-      <h1 class="govuk-heading-xl">Teams</h1>
+      <h1 class="govuk-heading-xl">Manage your team</h1>
 
       {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
-
-      <p class="govuk-body"><a class="govuk-link" href="/teams/all">View all teams</a></p>
 
       {% if overview.team %}
         <h2 class="govuk-heading-l">{{ overview.team.name }}</h2>
@@ -48,6 +48,7 @@
           </form>
         {% endif %}
 
+        <p class="govuk-body"><a class="govuk-link" href="/teams/leave">Leave team</a></p>
         <p class="govuk-body"><a class="govuk-link app-admin-delete-link" href="/teams/disband">Disband team</a></p>
       {% else %}
         {% if overview.invitations.length %}
@@ -65,18 +66,7 @@
           </section>
         {% endif %}
 
-        <h2 class="govuk-heading-l">Create a team</h2>
-        <p class="govuk-body">Creating a team makes you its first member.</p>
-        <form action="/teams/create" method="post" novalidate>
-          {{ govukInput({
-            id: "teamName",
-            name: "teamName",
-            value: values.teamName,
-            label: { text: "Team name", classes: "govuk-label--m" },
-            errorMessage: { text: fieldErrors.teamName } if fieldErrors.teamName
-          }) }}
-          {{ govukButton({ text: "Create team" }) }}
-        </form>
+        {{ govukButton({ text: "Create a team", href: "/teams/create" }) }}
       {% endif %}
     </div>
   </div>

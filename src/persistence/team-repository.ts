@@ -31,12 +31,20 @@ export interface TeamListItem {
   memberCount: number;
 }
 
+export interface TeamDetails {
+  id: string;
+  name: string;
+  members: TeamMember[];
+}
+
 export interface TeamRepository {
   getOverview(userId: string): Promise<TeamOverview>;
   listAll(): Promise<TeamListItem[]>;
+  findById(teamId: string): Promise<TeamDetails | undefined>;
   create(userId: string, name: string): Promise<void>;
   invite(userId: string, displayName: string): Promise<void>;
   respondToInvitation(userId: string, invitationId: string, accept: boolean): Promise<void>;
+  leave(userId: string): Promise<void>;
   disband(userId: string): Promise<void>;
 }
 
@@ -50,9 +58,11 @@ export class TeamOperationError extends Error {
 class NoopTeamRepository implements TeamRepository {
   async getOverview(): Promise<TeamOverview> { return { invitations: [] }; }
   async listAll(): Promise<TeamListItem[]> { return []; }
+  async findById(): Promise<TeamDetails | undefined> { return undefined; }
   async create(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
   async invite(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
   async respondToInvitation(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
+  async leave(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
   async disband(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
 }
 
@@ -155,6 +165,35 @@ class SupabaseTeamRepository implements TeamRepository {
     }));
   }
 
+  async findById(teamId: string): Promise<TeamDetails | undefined> {
+    const teamResponse = await this.client
+      .from("teams")
+      .select("id, name")
+      .eq("id", teamId)
+      .maybeSingle();
+    if (teamResponse.error) throw new Error(`Could not load team: ${teamResponse.error.message}`);
+    if (!teamResponse.data) return undefined;
+
+    const membersResponse = await this.client
+      .from("team_members")
+      .select("user_id")
+      .eq("team_id", teamId)
+      .order("joined_at", { ascending: true });
+    if (membersResponse.error) throw new Error(`Could not load team members: ${membersResponse.error.message}`);
+
+    const memberRows = (membersResponse.data ?? []) as Array<{ user_id: string }>;
+    const profiles = await this.loadProfiles(memberRows.map(({ user_id }) => user_id));
+
+    return {
+      id: String(teamResponse.data.id),
+      name: String(teamResponse.data.name),
+      members: memberRows.map(({ user_id }) => ({
+        id: user_id,
+        displayName: profiles.get(user_id) ?? "Member"
+      }))
+    };
+  }
+
   async create(userId: string, name: string): Promise<void> {
     await this.call("create_move_it_team", { requesting_user_id: userId, requested_name: name });
   }
@@ -172,6 +211,10 @@ class SupabaseTeamRepository implements TeamRepository {
       requested_invitation_id: invitationId,
       accept_invitation: accept
     });
+  }
+
+  async leave(userId: string): Promise<void> {
+    await this.call("leave_move_it_team", { requesting_user_id: userId });
   }
 
   async disband(userId: string): Promise<void> {

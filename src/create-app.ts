@@ -559,14 +559,31 @@ export function createApp(
   app.get("/teams", async (request, response, next) => {
     const user = requireAuthenticatedUser(request, response);
     if (!user) return;
+    try {
+      const [allTeams, overview] = await Promise.all([
+        teams.listAll(),
+        teams.getOverview(user.id)
+      ]);
+      return response.render("teams/all", { teams: allTeams, overview });
+    }
+    catch (error) { return next(error); }
+  });
+
+  app.get("/teams/manage", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
     try { return await renderTeams(response, user.id); }
     catch (error) { return next(error); }
   });
 
-  app.get("/teams/all", async (request, response, next) => {
-    if (!requireAuthenticatedUser(request, response)) return;
-    try { return response.render("teams/all", { teams: await teams.listAll() }); }
-    catch (error) { return next(error); }
+  app.get("/teams/create", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try {
+      const overview = await teams.getOverview(user.id);
+      if (overview.team) return response.redirect(303, "/teams/manage");
+      return response.render("teams/create");
+    } catch (error) { return next(error); }
   });
 
   app.post("/teams/create", async (request, response, next) => {
@@ -575,20 +592,18 @@ export function createApp(
     const parsed = teamNameSchema.safeParse(request.body);
     if (!parsed.success) {
       const message = parsed.error.issues[0]?.message ?? "Enter a team name";
-      try {
-        return await renderTeams(response, user.id, 400, {
-          values: request.body,
-          fieldErrors: { teamName: message },
-          errors: [{ text: message, href: "#teamName" }]
-        });
-      } catch (error) { return next(error); }
+      return response.status(400).render("teams/create", {
+        values: request.body,
+        fieldErrors: { teamName: message },
+        errors: [{ text: message, href: "#teamName" }]
+      });
     }
     try {
       await teams.create(user.id, parsed.data.teamName);
-      return response.redirect(303, "/teams");
+      return response.redirect(303, "/teams/manage");
     } catch (error) {
       if (!(error instanceof TeamOperationError)) return next(error);
-      return await renderTeams(response, user.id, 400, {
+      return response.status(400).render("teams/create", {
         values: request.body,
         fieldErrors: { teamName: error.message },
         errors: [{ text: error.message, href: "#teamName" }]
@@ -612,7 +627,7 @@ export function createApp(
     }
     try {
       await teams.invite(user.id, parsed.data.displayName);
-      return response.redirect(303, "/teams");
+      return response.redirect(303, "/teams/manage");
     } catch (error) {
       if (!(error instanceof TeamOperationError)) return next(error);
       return await renderTeams(response, user.id, 400, {
@@ -628,7 +643,7 @@ export function createApp(
     if (!user) return;
     try {
       await teams.respondToInvitation(user.id, request.params.id, true);
-      return response.redirect(303, "/teams");
+      return response.redirect(303, "/teams/manage");
     } catch (error) {
       if (!(error instanceof TeamOperationError)) return next(error);
       return await renderTeams(response, user.id, 400, {
@@ -642,7 +657,7 @@ export function createApp(
     if (!user) return;
     try {
       await teams.respondToInvitation(user.id, request.params.id, false);
-      return response.redirect(303, "/teams");
+      return response.redirect(303, "/teams/manage");
     } catch (error) { return next(error); }
   });
 
@@ -662,6 +677,38 @@ export function createApp(
     try {
       await teams.disband(user.id);
       return response.redirect(303, "/teams");
+    } catch (error) { return next(error); }
+  });
+
+  app.get("/teams/leave", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try {
+      const overview = await teams.getOverview(user.id);
+      if (!overview.team) return response.status(404).render("404");
+      return response.render("teams/leave", { team: overview.team });
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/teams/leave", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try {
+      await teams.leave(user.id);
+      return response.redirect(303, "/teams");
+    } catch (error) { return next(error); }
+  });
+
+  app.get("/teams/:id", async (request, response, next) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request.params.id)) {
+      return response.status(404).render("404");
+    }
+
+    try {
+      const team = await teams.findById(request.params.id);
+      if (!team) return response.status(404).render("404");
+      return response.render("teams/show", { team });
     } catch (error) { return next(error); }
   });
 

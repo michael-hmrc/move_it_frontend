@@ -1,21 +1,38 @@
 {% extends "layouts/main.njk" %}
 
-{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 
-{% set pageTitle = "All teams - Move It" %}
-{% block beforeContent %}{{ govukBackLink({ href: "/teams", text: "Back" }) }}{% endblock %}
+{% set pageTitle = "Teams - Move It" %}
 
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
-      <h1 class="govuk-heading-xl">All teams</h1>
+      <h1 class="govuk-heading-xl">Teams</h1>
+
+      {% if overview.team %}
+        {{ govukButton({ text: "Manage your team", href: "/teams/manage" }) }}
+      {% elif overview.invitations.length %}
+        {{ govukButton({ text: "View team invitations", href: "/teams/manage" }) }}
+      {% else %}
+        {{ govukButton({ text: "Create a team", href: "/teams/create" }) }}
+      {% endif %}
+
       {% if teams.length %}
         {% set rows = [] %}
         {% for team in teams %}
-          {% set rows = (rows.push([{ text: team.name }, { text: team.memberCount + " of 5" }]), rows) %}
+          {% set viewLink %}
+            <a class="govuk-link" href="/teams/{{ team.id }}">
+              View<span class="govuk-visually-hidden"> {{ team.name }} team members</span>
+            </a>
+          {% endset %}
+          {% set rows = (rows.push([
+            { text: team.name },
+            { text: team.memberCount + " of 5" },
+            { html: viewLink }
+          ]), rows) %}
         {% endfor %}
-        {{ govukTable({ head: [{ text: "Team" }, { text: "Members" }], rows: rows }) }}
+        {{ govukTable({ head: [{ text: "Team" }, { text: "Members" }, { text: "View" }], rows: rows }) }}
       {% else %}
         <p class="govuk-body">No teams have been created yet.</p>
       {% endif %}
