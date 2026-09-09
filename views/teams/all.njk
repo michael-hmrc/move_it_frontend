@@ -1,0 +1,24 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageTitle = "All teams - Move It" %}
+{% block beforeContent %}{{ govukBackLink({ href: "/teams", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">All teams</h1>
+      {% if teams.length %}
+        {% set rows = [] %}
+        {% for team in teams %}
+          {% set rows = (rows.push([{ text: team.name }, { text: team.memberCount + " of 5" }]), rows) %}
+        {% endfor %}
+        {{ govukTable({ head: [{ text: "Team" }, { text: "Members" }], rows: rows }) }}
+      {% else %}
+        <p class="govuk-body">No teams have been created yet.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

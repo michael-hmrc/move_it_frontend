@@ -36,6 +36,22 @@ export const signInPasswordSchema = z.object({
   password: z.string({ error: "Enter your password" }).min(1, "Enter your password")
 });
 
+export const teamNameSchema = z.object({
+  teamName: z
+    .string({ error: "Enter a team name" })
+    .trim()
+    .min(2, "Team name must be at least 2 characters")
+    .max(40, "Team name must be 40 characters or fewer")
+});
+
+export const teamInvitationSchema = z.object({
+  displayName: z
+    .string({ error: "Enter a display name" })
+    .trim()
+    .min(2, "Enter a display name")
+    .max(40, "Display name must be 40 characters or fewer")
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string({ error: "Enter your current password" }).min(1, "Enter your current password"),

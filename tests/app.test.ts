@@ -7,6 +7,7 @@ import {
   type AuthenticationService
 } from "../src/persistence/authentication.js";
 import type { ConversionRepository } from "../src/persistence/conversion-repository.js";
+import type { TeamRepository } from "../src/persistence/team-repository.js";
 
 function repositoryWith(overrides: Partial<ConversionRepository> = {}): ConversionRepository {
   return {
@@ -14,6 +15,18 @@ function repositoryWith(overrides: Partial<ConversionRepository> = {}): Conversi
     listMonthly: vi.fn().mockResolvedValue([]),
     listForUser: vi.fn().mockResolvedValue([]),
     listForDisplayName: vi.fn().mockResolvedValue([]),
+    ...overrides
+  };
+}
+
+function teamsWith(overrides: Partial<TeamRepository> = {}): TeamRepository {
+  return {
+    getOverview: vi.fn().mockResolvedValue({ invitations: [] }),
+    listAll: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue(undefined),
+    invite: vi.fn().mockResolvedValue(undefined),
+    respondToInvitation: vi.fn().mockResolvedValue(undefined),
+    disband: vi.fn().mockResolvedValue(undefined),
     ...overrides
   };
 }
@@ -35,8 +48,11 @@ const authentication: AuthenticationService = {
   listUsers: vi.fn().mockResolvedValue([])
 };
 
-function testApp(repository: ConversionRepository = repositoryWith()) {
-  return createApp(repository, authentication);
+function testApp(
+  repository: ConversionRepository = repositoryWith(),
+  teams: TeamRepository = teamsWith()
+) {
+  return createApp(repository, authentication, teams);
 }
 
 async function signIn(agent: ReturnType<typeof request.agent>) {
@@ -63,8 +79,8 @@ describe("Move It application", () => {
     expect(response.status).toBe(200);
     expect(response.text).toContain("Submit an activity");
     expect(response.text).toContain("View the monthly scoreboard");
-    expect(response.text).toContain("View one-hour conversions");
-    expect(response.text).toContain("Learn how Move It works");
+    expect(response.text).toContain("View conversions");
+    expect(response.text).toContain("Learn more about Move It");
     expect(response.text).toContain("Submit activity");
     expect(response.text).toContain('href="/login"');
     expect(response.text).toContain(">Account</a>");
@@ -92,13 +108,15 @@ describe("Move It application", () => {
     expect(response.text).toContain('class="app-mobile-navigation"');
     expect(response.text).toContain('aria-label="Primary navigation"');
     expect(response.text).toContain("app-mobile-navigation__link--current");
-    expect(response.text).toContain("How it works");
+    expect(response.text).toContain('href="/teams"');
+    expect(response.text).toContain(">Teams</span>");
+    expect(response.text).toContain('href="/about">How it works</a>');
   });
 
   it("starts the conversion with the activity question and uses the account display name", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);
-    const response = await agent.get("/convert");
+    const response = await agent.get("/submit");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("What activity did you do?");
@@ -112,6 +130,18 @@ describe("Move It application", () => {
     expect(response.text).toContain("How it works");
     expect(response.text).not.toContain("What is your display name?");
     expect(response.text).not.toContain("Crown copyright");
+  });
+
+  it("redirects old conversion URLs to the submission journey", async () => {
+    const page = await request(testApp()).get("/convert/activity?from=check");
+    const form = await request(testApp()).post("/convert/activity").type("form").send({
+      activity: "walking"
+    });
+
+    expect(page.status).toBe(308);
+    expect(page.headers.location).toBe("/submit/activity?from=check");
+    expect(form.status).toBe(308);
+    expect(form.headers.location).toBe("/submit/activity");
   });
 
   it("does not cache generated styles during development", async () => {
@@ -137,14 +167,14 @@ describe("Move It application", () => {
     await signIn(agent);
 
     const invalidActivity = await agent
-      .post("/convert/activity")
+      .post("/submit/activity")
       .type("form")
       .send({ activity: "not-an-activity" });
     expect(invalidActivity.status).toBe(400);
     expect(invalidActivity.text).toContain("Select an activity");
 
     const missingOtherActivity = await agent
-      .post("/convert/activity")
+      .post("/submit/activity")
       .type("form")
       .send({ activity: "other", otherActivity: "" });
     expect(missingOtherActivity.status).toBe(400);
@@ -155,33 +185,33 @@ describe("Move It application", () => {
       'id="other-activity-container" class="app-select-conditional"'
     );
 
-    await agent.post("/convert/activity").type("form").send({ activity: "football" });
+    await agent.post("/submit/activity").type("form").send({ activity: "football" });
 
     const invalidIntensity = await agent
-      .post("/convert/intensity")
+      .post("/submit/intensity")
       .type("form")
       .send({ intensity: "extreme" });
     expect(invalidIntensity.status).toBe(400);
     expect(invalidIntensity.text).toContain("Select an intensity");
 
-    await agent.post("/convert/intensity").type("form").send({ intensity: "moderate" });
+    await agent.post("/submit/intensity").type("form").send({ intensity: "moderate" });
 
     const blankDuration = await agent
-      .post("/convert/duration")
+      .post("/submit/duration")
       .type("form")
       .send({ durationMinutes: "" });
     expect(blankDuration.status).toBe(400);
     expect(blankDuration.text).toContain("Enter the duration in minutes");
 
     const decimalDuration = await agent
-      .post("/convert/duration")
+      .post("/submit/duration")
       .type("form")
       .send({ durationMinutes: "12.5" });
     expect(decimalDuration.status).toBe(400);
     expect(decimalDuration.text).toContain("Duration must be a whole number");
 
     const excessiveDuration = await agent
-      .post("/convert/duration")
+      .post("/submit/duration")
       .type("form")
       .send({ durationMinutes: "1441" });
     expect(excessiveDuration.status).toBe(400);
@@ -192,7 +222,7 @@ describe("Move It application", () => {
     const agent = request.agent(testApp());
     await signIn(agent);
 
-    const activityPage = await agent.get("/convert/activity");
+    const activityPage = await agent.get("/submit/activity");
     expect(activityPage.text).toContain('<option value="other">Other</option>');
     expect(activityPage.text).toContain('data-module="app-conditional-select"');
     expect(activityPage.text).toContain('aria-controls="other-activity-container"');
@@ -203,13 +233,13 @@ describe("Move It application", () => {
     expect(activityPage.text).toContain("Other");
 
     const activityResponse = await agent
-      .post("/convert/activity")
+      .post("/submit/activity")
       .type("form")
       .send({ activity: "other", otherActivity: "Pilates" });
     expect(activityResponse.status).toBe(303);
-    expect(activityResponse.headers.location).toBe("/convert/intensity");
+    expect(activityResponse.headers.location).toBe("/submit/intensity");
 
-    const intensityPage = await agent.get("/convert/intensity");
+    const intensityPage = await agent.get("/submit/intensity");
     expect(intensityPage.text).toContain("How intense was your pilates session?");
   });
 
@@ -218,58 +248,58 @@ describe("Move It application", () => {
     const agent = request.agent(testApp(repository));
     await signIn(agent);
 
-    const activityPage = await agent.get("/convert/activity");
+    const activityPage = await agent.get("/submit/activity");
     expect(activityPage.text).toContain("What activity did you do?");
 
     const activityResponse = await agent
-      .post("/convert/activity")
+      .post("/submit/activity")
       .type("form")
       .send({ activity: "swimming" });
-    expect(activityResponse.headers.location).toBe("/convert/intensity");
+    expect(activityResponse.headers.location).toBe("/submit/intensity");
 
-    const intensityPage = await agent.get("/convert/intensity");
-    expect(intensityPage.text).toContain("How intense was your swimming activity?");
-    const intensityHeadingPosition = intensityPage.text.indexOf("How intense was your swimming activity?");
-    const intensityInsetPosition = intensityPage.text.indexOf("Intensity is self declared");
+    const intensityPage = await agent.get("/submit/intensity");
+    expect(intensityPage.text).toContain("How intense was your swimming session?");
+    const intensityHeadingPosition = intensityPage.text.indexOf("How intense was your swimming session?");
+    const intensityInsetPosition = intensityPage.text.indexOf("Intensity varies and is different for everyone");
     const intensityOptionPosition = intensityPage.text.indexOf('class="govuk-radios__item"');
     expect(intensityInsetPosition).toBeGreaterThan(intensityHeadingPosition);
     expect(intensityOptionPosition).toBeGreaterThan(intensityInsetPosition);
 
     const intensityResponse = await agent
-      .post("/convert/intensity")
+      .post("/submit/intensity")
       .type("form")
       .send({ intensity: "vigorous" });
-    expect(intensityResponse.headers.location).toBe("/convert/duration");
+    expect(intensityResponse.headers.location).toBe("/submit/duration");
 
-    const durationPage = await agent.get("/convert/duration");
+    const durationPage = await agent.get("/submit/duration");
     expect(durationPage.text).toContain("How long did the activity last?");
     expect(durationPage.text).toContain('inputmode="numeric"');
     expect(durationPage.text).toContain('maxlength="4"');
     expect(durationPage.text).toContain('pattern="[0-9]*"');
 
     const durationResponse = await agent
-      .post("/convert/duration")
+      .post("/submit/duration")
       .type("form")
       .send({ durationMinutes: "20" });
     expect(durationResponse.status).toBe(303);
-    expect(durationResponse.headers.location).toBe("/convert/check");
+    expect(durationResponse.headers.location).toBe("/submit/check");
 
-    const checkPage = await agent.get("/convert/check");
+    const checkPage = await agent.get("/submit/check");
     expect(checkPage.status).toBe(200);
     expect(checkPage.text).toContain("Check your answers before submitting");
     expect(checkPage.text).toContain("4200 steps");
     expect(repository.save).not.toHaveBeenCalled();
 
-    const changeDurationPage = await agent.get("/convert/duration?from=check");
+    const changeDurationPage = await agent.get("/submit/duration?from=check");
     expect(changeDurationPage.status).toBe(200);
-    expect(changeDurationPage.text).toContain('href="/convert/check"');
-    expect(changeDurationPage.text).toContain('action="/convert/duration?from=check"');
+    expect(changeDurationPage.text).toContain('href="/submit/check"');
+    expect(changeDurationPage.text).toContain('action="/submit/duration?from=check"');
 
-    const submission = await agent.post("/convert/check");
+    const submission = await agent.post("/submit/check");
     expect(submission.status).toBe(303);
-    expect(submission.headers.location).toBe("/convert/result");
+    expect(submission.headers.location).toBe("/submit/result");
 
-    const resultPage = await agent.get("/convert/result");
+    const resultPage = await agent.get("/submit/result");
     expect(resultPage.status).toBe(200);
     expect(resultPage.text).toContain("4200 steps");
     expect(repository.save).toHaveBeenCalledWith(
@@ -285,7 +315,7 @@ describe("Move It application", () => {
   });
 
   it("redirects unauthenticated users to sign in", async () => {
-    const response = await request(testApp()).get("/convert/duration");
+    const response = await request(testApp()).get("/submit/duration");
 
     expect(response.status).toBe(303);
     expect(response.headers.location).toBe("/login");
@@ -369,14 +399,14 @@ describe("Move It application", () => {
     expect(response.status).toBe(200);
     expect(response.text).toContain("How Move It works");
     expect(response.text).toContain("illustrative estimates");
-    expect(response.text).toContain('aria-current="page"');
+    expect(response.text).toContain('href="/about">How it works</a>');
   });
 
   it("renders the one-hour conversion guide from the shared rates", async () => {
     const response = await request(createApp()).get("/conversions");
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain("One-hour activity conversion guide");
+    expect(response.text).toContain("Activity conversion guide");
     expect(response.text).toContain("Cycling");
     expect(response.text).toContain("Football");
     expect(response.text).toContain("Running");
@@ -392,12 +422,13 @@ describe("Move It application", () => {
     const signup = await request(testApp()).get("/signup");
 
     expect(login.status).toBe(200);
-    expect(login.text).toContain("Move It is for approved members");
     expect(login.text).toContain("Sign in");
+    expect(login.text).toContain("Request access");
     expect(login.text).toContain('data-module="govuk-password-input"');
     expect(login.text).toContain('aria-controls="password"');
     expect(login.text).toContain('aria-label="Show password"');
     expect(login.text).toContain("app-password-toggle");
+    expect(login.text).toContain("app-login-email-input");
     expect(signup.status).toBe(303);
     expect(signup.headers.location).toBe("/login");
   });
@@ -441,6 +472,122 @@ describe("Move It application", () => {
     expect(response.text).toContain('href="/account/activities"');
     expect(response.text).toContain('href="/account/change-password"');
     expect(response.text).toContain('href="/account" aria-current="page"');
+  });
+
+  it("lets a user create a team when they are not already in one", async () => {
+    const teamRepository = teamsWith();
+    const agent = request.agent(testApp(repositoryWith(), teamRepository));
+    await signIn(agent);
+
+    const page = await agent.get("/teams");
+    expect(page.status).toBe(200);
+    expect(page.text).toContain("Create a team");
+    expect(page.text).toContain('href="/teams/all"');
+    expect(page.text).toContain('href="/teams" aria-current="page"');
+
+    const response = await agent.post("/teams/create").type("form").send({ teamName: "Movers" });
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/teams");
+    expect(teamRepository.create).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      "Movers"
+    );
+  });
+
+  it("shows a team and lets any member invite someone or disband it", async () => {
+    const teamRepository = teamsWith({
+      getOverview: vi.fn().mockResolvedValue({
+        team: {
+          id: "team-id",
+          name: "Movers",
+          members: [
+            { id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7", displayName: "Alex" },
+            { id: "member-id", displayName: "Sam" }
+          ],
+          pendingInvitations: []
+        },
+        invitations: []
+      })
+    });
+    const agent = request.agent(testApp(repositoryWith(), teamRepository));
+    await signIn(agent);
+
+    const page = await agent.get("/teams");
+    expect(page.text).toContain("Movers");
+    expect(page.text).toContain("Alex");
+    expect(page.text).toContain("Sam");
+    expect(page.text).toContain("Send invitation");
+    expect(page.text).toContain('href="/teams/disband"');
+
+    const invitation = await agent.post("/teams/invite").type("form").send({ displayName: "Morgan" });
+    expect(invitation.status).toBe(303);
+    expect(teamRepository.invite).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      "Morgan"
+    );
+
+    const confirmation = await agent.get("/teams/disband");
+    expect(confirmation.text).toContain("Disband Movers?");
+    expect(confirmation.text).toContain("submitted activities will not be deleted");
+    const disband = await agent.post("/teams/disband");
+    expect(disband.status).toBe(303);
+    expect(teamRepository.disband).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7"
+    );
+  });
+
+  it("lets a user accept or decline a team invitation", async () => {
+    const teamRepository = teamsWith({
+      getOverview: vi.fn().mockResolvedValue({
+        invitations: [{ id: "invitation-id", teamName: "Movers" }]
+      })
+    });
+    const agent = request.agent(testApp(repositoryWith(), teamRepository));
+    await signIn(agent);
+
+    const page = await agent.get("/teams");
+    expect(page.text).toContain("Movers</strong> has invited you to join");
+
+    await agent.post("/teams/invitations/invitation-id/accept");
+    expect(teamRepository.respondToInvitation).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      "invitation-id",
+      true
+    );
+
+    await agent.post("/teams/invitations/invitation-id/decline");
+    expect(teamRepository.respondToInvitation).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      "invitation-id",
+      false
+    );
+  });
+
+  it("shows all teams without exposing member email addresses", async () => {
+    const teamRepository = teamsWith({
+      listAll: vi.fn().mockResolvedValue([
+        { id: "team-1", name: "Movers", memberCount: 3 },
+        { id: "team-2", name: "Steppers", memberCount: 5 }
+      ])
+    });
+    const agent = request.agent(testApp(repositoryWith(), teamRepository));
+    await signIn(agent);
+
+    const response = await agent.get("/teams/all");
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("All teams");
+    expect(response.text).toContain("Movers");
+    expect(response.text).toContain("3 of 5");
+    expect(response.text).toContain("Steppers");
+    expect(response.text).toContain("5 of 5");
+    expect(response.text).not.toContain("@opencastsoftware.com");
+  });
+
+  it("requires sign-in to view teams", async () => {
+    const response = await request(testApp()).get("/teams");
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/login");
   });
 
   it("shows a signed-in user their submitted activities", async () => {

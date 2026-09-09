@@ -1,0 +1,83 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageTitle = ("Error: " if errors else "") + "Teams - Move It" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Teams</h1>
+
+      {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
+
+      <p class="govuk-body"><a class="govuk-link" href="/teams/all">View all teams</a></p>
+
+      {% if overview.team %}
+        <h2 class="govuk-heading-l">{{ overview.team.name }}</h2>
+        <p class="govuk-body">Teams can have up to 5 members.</p>
+
+        {% set memberRows = [] %}
+        {% for member in overview.team.members %}
+          {% set memberRows = (memberRows.push([{ text: member.displayName }]), memberRows) %}
+        {% endfor %}
+        {{ govukTable({ head: [{ text: "Member" }], rows: memberRows }) }}
+
+        {% if overview.team.pendingInvitations.length %}
+          <h3 class="govuk-heading-m">Pending invitations</h3>
+          <ul class="govuk-list govuk-list--bullet">
+            {% for invitation in overview.team.pendingInvitations %}<li>{{ invitation.displayName }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if overview.team.members.length + overview.team.pendingInvitations.length < 5 %}
+          <h3 class="govuk-heading-m">Invite someone</h3>
+          <form action="/teams/invite" method="post" novalidate>
+            {{ govukInput({
+              id: "displayName",
+              name: "displayName",
+              value: values.displayName,
+              label: { text: "Display name", classes: "govuk-label--m" },
+              hint: { text: "Enter the unique display name of an approved user." },
+              errorMessage: { text: fieldErrors.displayName } if fieldErrors.displayName
+            }) }}
+            {{ govukButton({ text: "Send invitation" }) }}
+          </form>
+        {% endif %}
+
+        <p class="govuk-body"><a class="govuk-link app-admin-delete-link" href="/teams/disband">Disband team</a></p>
+      {% else %}
+        {% if overview.invitations.length %}
+          <section id="team-invitations">
+            <h2 class="govuk-heading-l">Team invitations</h2>
+            {% for invitation in overview.invitations %}
+              <div class="app-team-invitation">
+                <p class="govuk-body"><strong>{{ invitation.teamName }}</strong> has invited you to join.</p>
+                <div class="govuk-button-group">
+                  <form action="/teams/invitations/{{ invitation.id }}/accept" method="post">{{ govukButton({ text: "Accept" }) }}</form>
+                  <form action="/teams/invitations/{{ invitation.id }}/decline" method="post">{{ govukButton({ text: "Decline", classes: "govuk-button--secondary" }) }}</form>
+                </div>
+              </div>
+            {% endfor %}
+          </section>
+        {% endif %}
+
+        <h2 class="govuk-heading-l">Create a team</h2>
+        <p class="govuk-body">Creating a team makes you its first member.</p>
+        <form action="/teams/create" method="post" novalidate>
+          {{ govukInput({
+            id: "teamName",
+            name: "teamName",
+            value: values.teamName,
+            label: { text: "Team name", classes: "govuk-label--m" },
+            errorMessage: { text: fieldErrors.teamName } if fieldErrors.teamName
+          }) }}
+          {{ govukButton({ text: "Create team" }) }}
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

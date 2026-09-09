@@ -247,6 +247,16 @@
   gap: govuk-spacing(2);
 }
 
+.app-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3) govuk-spacing(4);
+}
+
+.app-footer__links li {
+  margin: 0;
+}
+
 @include govuk-media-query($until: tablet) {
   .app-footer__container {
     align-items: flex-start;
@@ -263,11 +273,6 @@
 
 .app-footer__logo-link:focus {
   @include govuk-focused-text;
-}
-
-.app-footer li {
-  display: inline-block;
-  margin-right: govuk-spacing(4);
 }
 
 .app-table-scroll {
@@ -352,6 +357,12 @@
 .app-password-toggle[aria-label="Hide password"]::after {
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 3 18 18'/%3E%3Cpath d='M10.6 5.2A10.8 10.8 0 0 1 12 5c6.3 0 9.9 7 9.9 7a14.7 14.7 0 0 1-2.2 3.1M6.6 6.6A16.5 16.5 0 0 0 2.1 12s3.6 7 9.9 7a10.7 10.7 0 0 0 5.4-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2'/%3E%3C/svg%3E");
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 3 18 18'/%3E%3Cpath d='M10.6 5.2A10.8 10.8 0 0 1 12 5c6.3 0 9.9 7 9.9 7a14.7 14.7 0 0 1-2.2 3.1M6.6 6.6A16.5 16.5 0 0 0 2.1 12s3.6 7 9.9 7a10.7 10.7 0 0 0 5.4-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2'/%3E%3C/svg%3E");
+}
+
+@include govuk-media-query($from: mobile) {
+  .app-login-email-input {
+    width: calc(100% - 7.5rem - 5px);
+  }
 }
 
 @include govuk-media-query($until: tablet) {

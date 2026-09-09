@@ -29,7 +29,9 @@ import {
   emailSchema,
   intensitySchema,
   passwordSchema,
-  signInPasswordSchema
+  signInPasswordSchema,
+  teamInvitationSchema,
+  teamNameSchema
 } from "./domain/validation.js";
 import {
   createAuthenticationService,
@@ -41,6 +43,11 @@ import {
   createConversionRepository,
   type ConversionRepository
 } from "./persistence/conversion-repository.js";
+import {
+  createTeamRepository,
+  TeamOperationError,
+  type TeamRepository
+} from "./persistence/team-repository.js";
 
 interface JourneySession {
   activity?: ActivityId;
@@ -178,7 +185,8 @@ function requireAdmin(request: Request, response: Response) {
 
 export function createApp(
   repository: ConversionRepository = createConversionRepository(),
-  authentication: AuthenticationService = createAuthenticationService()
+  authentication: AuthenticationService = createAuthenticationService(),
+  teams: TeamRepository = createTeamRepository()
 ) {
   const app = express();
   const projectRoot = process.cwd();
@@ -243,7 +251,9 @@ export function createApp(
         || request.path.startsWith("/signup")
         || request.path.startsWith("/request-access")
         ? "account"
-        : request.path.startsWith("/users/")
+        : request.path.startsWith("/teams")
+          ? "teams"
+          : request.path.startsWith("/users/")
           ? "scoreboard"
         : request.path.startsWith("/conversions")
           ? "conversions"
@@ -263,7 +273,12 @@ export function createApp(
     response.render("home");
   });
 
-  app.get("/convert", (request, response) => {
+  app.use("/convert", (request, response) => {
+    const suffix = request.originalUrl.slice("/convert".length);
+    response.redirect(308, `/submit${suffix}`);
+  });
+
+  app.get("/submit", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
     response.render("journey/activity", {
       activities,
@@ -272,11 +287,11 @@ export function createApp(
         otherActivity: journey(request).otherActivity
       },
       backHref: "/",
-      formAction: "/convert/activity"
+      formAction: "/submit/activity"
     });
   });
 
-  app.get("/convert/activity", (request, response) => {
+  app.get("/submit/activity", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
 
     response.render("journey/activity", {
@@ -285,12 +300,12 @@ export function createApp(
         activity: journey(request).activity,
         otherActivity: journey(request).otherActivity
       },
-      backHref: isChangingAnswer(request) ? "/convert/check" : "/convert",
-      formAction: journeyUrl("/convert/activity", request)
+      backHref: isChangingAnswer(request) ? "/submit/check" : "/submit",
+      formAction: journeyUrl("/submit/activity", request)
     });
   });
 
-  app.post("/convert/activity", (request, response) => {
+  app.post("/submit/activity", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
     const parsed = activitySchema.safeParse(request.body);
 
@@ -303,8 +318,8 @@ export function createApp(
         request.body,
         {
           activities,
-          backHref: isChangingAnswer(request) ? "/convert/check" : "/convert",
-          formAction: journeyUrl("/convert/activity", request)
+          backHref: isChangingAnswer(request) ? "/submit/check" : "/submit",
+          formAction: journeyUrl("/submit/activity", request)
         }
       );
     }
@@ -313,25 +328,25 @@ export function createApp(
     journey(request).otherActivity = parsed.data.activity === "other"
       ? parsed.data.otherActivity
       : undefined;
-    return response.redirect(303, isChangingAnswer(request) ? "/convert/check" : "/convert/intensity");
+    return response.redirect(303, isChangingAnswer(request) ? "/submit/check" : "/submit/intensity");
   });
 
-  app.get("/convert/intensity", (request, response) => {
+  app.get("/submit/intensity", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
-    if (!requireJourneyValue(request, response, "activity", "/convert/activity")) return;
+    if (!requireJourneyValue(request, response, "activity", "/submit/activity")) return;
 
     response.render("journey/intensity", {
       intensities,
       activityName: selectedActivityName(journey(request)),
       values: { intensity: journey(request).intensity },
-      backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/activity",
-      formAction: journeyUrl("/convert/intensity", request)
+      backHref: isChangingAnswer(request) ? "/submit/check" : "/submit/activity",
+      formAction: journeyUrl("/submit/intensity", request)
     });
   });
 
-  app.post("/convert/intensity", (request, response) => {
+  app.post("/submit/intensity", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
-    if (!requireJourneyValue(request, response, "activity", "/convert/activity")) return;
+    if (!requireJourneyValue(request, response, "activity", "/submit/activity")) return;
     const parsed = intensitySchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -344,31 +359,31 @@ export function createApp(
         {
           intensities,
           activityName: selectedActivityName(journey(request)),
-          backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/activity",
-          formAction: journeyUrl("/convert/intensity", request)
+          backHref: isChangingAnswer(request) ? "/submit/check" : "/submit/activity",
+          formAction: journeyUrl("/submit/intensity", request)
         }
       );
     }
 
     journey(request).intensity = parsed.data.intensity;
-    return response.redirect(303, isChangingAnswer(request) ? "/convert/check" : "/convert/duration");
+    return response.redirect(303, isChangingAnswer(request) ? "/submit/check" : "/submit/duration");
   });
 
-  app.get("/convert/duration", (request, response) => {
+  app.get("/submit/duration", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
-    if (!requireJourneyValue(request, response, "intensity", "/convert/intensity")) return;
+    if (!requireJourneyValue(request, response, "intensity", "/submit/intensity")) return;
 
     response.render("journey/duration", {
       values: { durationMinutes: journey(request).durationMinutes },
-      backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/intensity",
-      formAction: journeyUrl("/convert/duration", request)
+      backHref: isChangingAnswer(request) ? "/submit/check" : "/submit/intensity",
+      formAction: journeyUrl("/submit/duration", request)
     });
   });
 
-  app.post("/convert/duration", async (request, response, next) => {
+  app.post("/submit/duration", async (request, response, next) => {
     const user = requireAuthenticatedUser(request, response);
     if (!user) return;
-    if (!requireJourneyValue(request, response, "intensity", "/convert/intensity")) return;
+    if (!requireJourneyValue(request, response, "intensity", "/submit/intensity")) return;
     const parsed = durationSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -379,23 +394,23 @@ export function createApp(
         "durationMinutes",
         request.body,
         {
-          backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/intensity",
-          formAction: journeyUrl("/convert/duration", request)
+          backHref: isChangingAnswer(request) ? "/submit/check" : "/submit/intensity",
+          formAction: journeyUrl("/submit/duration", request)
         }
       );
     }
 
     const session = journey(request);
     session.durationMinutes = parsed.data.durationMinutes;
-    return response.redirect(303, "/convert/check");
+    return response.redirect(303, "/submit/check");
   });
 
-  app.get("/convert/check", (request, response) => {
+  app.get("/submit/check", (request, response) => {
     const user = requireAuthenticatedUser(request, response);
     if (!user) return;
-    if (!requireJourneyValue(request, response, "activity", "/convert")) return;
-    if (!requireJourneyValue(request, response, "intensity", "/convert/activity")) return;
-    if (!requireJourneyValue(request, response, "durationMinutes", "/convert/duration")) return;
+    if (!requireJourneyValue(request, response, "activity", "/submit")) return;
+    if (!requireJourneyValue(request, response, "intensity", "/submit/activity")) return;
+    if (!requireJourneyValue(request, response, "durationMinutes", "/submit/duration")) return;
 
     const session = journey(request);
     const result = convertActivityToSteps({
@@ -408,12 +423,12 @@ export function createApp(
     response.render("journey/check", { result });
   });
 
-  app.post("/convert/check", async (request, response, next) => {
+  app.post("/submit/check", async (request, response, next) => {
     const user = requireAuthenticatedUser(request, response);
     if (!user) return;
-    if (!requireJourneyValue(request, response, "activity", "/convert")) return;
-    if (!requireJourneyValue(request, response, "intensity", "/convert/activity")) return;
-    if (!requireJourneyValue(request, response, "durationMinutes", "/convert/duration")) return;
+    if (!requireJourneyValue(request, response, "activity", "/submit")) return;
+    if (!requireJourneyValue(request, response, "intensity", "/submit/activity")) return;
+    if (!requireJourneyValue(request, response, "durationMinutes", "/submit/duration")) return;
 
     const session = journey(request);
     const result = convertActivityToSteps({
@@ -427,22 +442,22 @@ export function createApp(
     try {
       await repository.save(result, user.id);
       session.result = result;
-      return response.redirect(303, "/convert/result");
+      return response.redirect(303, "/submit/result");
     } catch (error) {
       return next(error);
     }
   });
 
-  app.get("/convert/result", (request, response) => {
+  app.get("/submit/result", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
-    if (!requireJourneyValue(request, response, "result", "/convert")) return;
+    if (!requireJourneyValue(request, response, "result", "/submit")) return;
     response.render("result", { result: journey(request).result });
   });
 
-  app.get("/convert/reset", (request, response) => {
+  app.get("/submit/reset", (request, response) => {
     const currentUser = journey(request).user;
     request.session = currentUser ? { user: currentUser } : {};
-    response.redirect(303, "/convert");
+    response.redirect(303, "/submit");
   });
 
   app.get("/about", (_request, response) => {
@@ -529,6 +544,125 @@ export function createApp(
   app.get("/account/password-changed", (request, response) => {
     if (!requireAuthenticatedUser(request, response)) return;
     response.render("account/password-changed");
+  });
+
+  const renderTeams = async (
+    response: Response,
+    userId: string,
+    status = 200,
+    context: Record<string, unknown> = {}
+  ) => response.status(status).render("teams/index", {
+    overview: await teams.getOverview(userId),
+    ...context
+  });
+
+  app.get("/teams", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try { return await renderTeams(response, user.id); }
+    catch (error) { return next(error); }
+  });
+
+  app.get("/teams/all", async (request, response, next) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    try { return response.render("teams/all", { teams: await teams.listAll() }); }
+    catch (error) { return next(error); }
+  });
+
+  app.post("/teams/create", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    const parsed = teamNameSchema.safeParse(request.body);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Enter a team name";
+      try {
+        return await renderTeams(response, user.id, 400, {
+          values: request.body,
+          fieldErrors: { teamName: message },
+          errors: [{ text: message, href: "#teamName" }]
+        });
+      } catch (error) { return next(error); }
+    }
+    try {
+      await teams.create(user.id, parsed.data.teamName);
+      return response.redirect(303, "/teams");
+    } catch (error) {
+      if (!(error instanceof TeamOperationError)) return next(error);
+      return await renderTeams(response, user.id, 400, {
+        values: request.body,
+        fieldErrors: { teamName: error.message },
+        errors: [{ text: error.message, href: "#teamName" }]
+      });
+    }
+  });
+
+  app.post("/teams/invite", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    const parsed = teamInvitationSchema.safeParse(request.body);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Enter a display name";
+      try {
+        return await renderTeams(response, user.id, 400, {
+          values: request.body,
+          fieldErrors: { displayName: message },
+          errors: [{ text: message, href: "#displayName" }]
+        });
+      } catch (error) { return next(error); }
+    }
+    try {
+      await teams.invite(user.id, parsed.data.displayName);
+      return response.redirect(303, "/teams");
+    } catch (error) {
+      if (!(error instanceof TeamOperationError)) return next(error);
+      return await renderTeams(response, user.id, 400, {
+        values: request.body,
+        fieldErrors: { displayName: error.message },
+        errors: [{ text: error.message, href: "#displayName" }]
+      });
+    }
+  });
+
+  app.post("/teams/invitations/:id/accept", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try {
+      await teams.respondToInvitation(user.id, request.params.id, true);
+      return response.redirect(303, "/teams");
+    } catch (error) {
+      if (!(error instanceof TeamOperationError)) return next(error);
+      return await renderTeams(response, user.id, 400, {
+        errors: [{ text: error.message, href: "#team-invitations" }]
+      });
+    }
+  });
+
+  app.post("/teams/invitations/:id/decline", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try {
+      await teams.respondToInvitation(user.id, request.params.id, false);
+      return response.redirect(303, "/teams");
+    } catch (error) { return next(error); }
+  });
+
+  app.get("/teams/disband", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try {
+      const overview = await teams.getOverview(user.id);
+      if (!overview.team) return response.status(404).render("404");
+      return response.render("teams/disband", { team: overview.team });
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/teams/disband", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    try {
+      await teams.disband(user.id);
+      return response.redirect(303, "/teams");
+    } catch (error) { return next(error); }
   });
 
   app.post("/login", async (request, response, next) => {

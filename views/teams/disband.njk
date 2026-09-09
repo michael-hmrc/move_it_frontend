@@ -1,0 +1,24 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = "Disband team - Move It" %}
+{% block beforeContent %}{{ govukBackLink({ href: "/teams", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Disband {{ team.name }}?</h1>
+      {{ govukWarningText({
+        text: "This will remove every member and pending invitation from the team. User accounts and submitted activities will not be deleted.",
+        iconFallbackText: "Warning"
+      }) }}
+      <form action="/teams/disband" method="post">
+        {{ govukButton({ text: "Disband team", classes: "govuk-button--warning" }) }}
+      </form>
+      <p class="govuk-body"><a class="govuk-link" href="/teams">Cancel</a></p>
+    </div>
+  </div>
+{% endblock %}

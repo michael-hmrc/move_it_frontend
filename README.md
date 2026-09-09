@@ -14,12 +14,12 @@ HTTP-only cookie so the journey works across stateless Vercel functions and Back
 links retain previous answers.
 
 An official GOV.UK Frontend Service navigation component provides access to the
-conversion journey, monthly scoreboard and an explanation of how the estimates
-work. The conversion itself remains a linear one-question-per-page journey.
+submission journey, monthly scoreboard and teams. The conversion itself remains
+a linear one-question-per-page journey.
 
 The root URL is a landing page with the main service actions. Both the Opencast
 logo and the centred Move It service name link back to this page. The conversion
-starts at `/convert`.
+starts at `/submit`.
 
 The `/conversions` reference page uses the same activity-rate source as the
 calculator and compares the estimated steps for 60 minutes at each intensity.
@@ -56,9 +56,8 @@ npm run typecheck
 ## Configure Supabase
 
 1. Create a Supabase project.
-2. Run the SQL in
-   `supabase/migrations/20260828000000_create_conversion_records.sql` using the
-   Supabase SQL editor, or apply it with the Supabase CLI.
+2. Apply every SQL migration in `supabase/migrations` in filename order using
+   the Supabase SQL editor or Supabase CLI.
 3. Copy `.env.example` to `.env` and add the project URL and server-only secret
    key.
 
@@ -81,6 +80,10 @@ The scoreboard groups records by display name for the current UTC calendar
 month, ranks total estimated steps, and shows the number of activities. Display
 names are public, but submissions are associated with a verified Supabase Auth
 user ID. Only email addresses at `AUTH_ALLOWED_EMAIL_DOMAIN` can sign in.
+
+Approved users can create a team, invite other approved users by their unique
+display name, and view all teams. A user can belong to one team, each team can
+have up to five members, and any member can disband their current team.
 
 ## Configure invite-only accounts
 

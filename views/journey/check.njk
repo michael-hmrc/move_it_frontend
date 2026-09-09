@@ -6,7 +6,7 @@
 
 {% set pageTitle = "Check your answers - Move It" %}
 
-{% block beforeContent %}{{ govukBackLink({ href: "/convert/duration", text: "Back" }) }}{% endblock %}
+{% block beforeContent %}{{ govukBackLink({ href: "/submit/duration", text: "Back" }) }}{% endblock %}
 
 {% block content %}
   <div class="govuk-grid-row">
@@ -19,23 +19,23 @@
           {
             key: { text: "Activity" },
             value: { text: result.activityName },
-            actions: { items: [{ href: "/convert/activity?from=check", text: "Change", visuallyHiddenText: "activity" }] }
+            actions: { items: [{ href: "/submit/activity?from=check", text: "Change", visuallyHiddenText: "activity" }] }
           },
           {
             key: { text: "Intensity" },
             value: { text: result.intensity | capitalize },
-            actions: { items: [{ href: "/convert/intensity?from=check", text: "Change", visuallyHiddenText: "intensity" }] }
+            actions: { items: [{ href: "/submit/intensity?from=check", text: "Change", visuallyHiddenText: "intensity" }] }
           },
           {
             key: { text: "Duration" },
             value: { text: result.durationMinutes + " minutes" },
-            actions: { items: [{ href: "/convert/duration?from=check", text: "Change", visuallyHiddenText: "duration" }] }
+            actions: { items: [{ href: "/submit/duration?from=check", text: "Change", visuallyHiddenText: "duration" }] }
           },
           { key: { text: "Estimated steps" }, value: { text: result.estimatedSteps + " steps" } }
         ]
       }) }}
 
-      <form action="/convert/check" method="post">
+      <form action="/submit/check" method="post">
         {{ govukButton({ text: "Submit activity" }) }}
       </form>
     </div>

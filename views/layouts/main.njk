@@ -60,7 +60,7 @@
         current: currentSection == "home"
       },
       {
-        href: "/convert",
+        href: "/submit",
         text: "Submit activity",
         current: currentSection == "convert"
       },
@@ -75,9 +75,9 @@
         current: currentSection == "scoreboard"
       },
       {
-        href: "/about",
-        text: "How it works",
-        current: currentSection == "about"
+        href: "/teams",
+        text: "Teams",
+        current: currentSection == "teams"
       }
     ]
   }) }}
@@ -87,7 +87,7 @@
       <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8Z"/></svg>
       <span>Home</span>
     </a>
-    <a class="app-mobile-navigation__link{% if currentSection == 'convert' %} app-mobile-navigation__link--current{% endif %}" href="/convert"{% if currentSection == 'convert' %} aria-current="page"{% endif %}>
+    <a class="app-mobile-navigation__link{% if currentSection == 'convert' %} app-mobile-navigation__link--current{% endif %}" href="/submit"{% if currentSection == 'convert' %} aria-current="page"{% endif %}>
       <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       <span>Submit</span>
     </a>
@@ -99,9 +99,9 @@
       <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-6h4v6H5Zm5 0V9h4v11h-4Zm5 0V4h4v16h-4Z"/></svg>
       <span>Scores</span>
     </a>
-    <a class="app-mobile-navigation__link{% if currentSection == 'about' %} app-mobile-navigation__link--current{% endif %}" href="/about"{% if currentSection == 'about' %} aria-current="page"{% endif %}>
-      <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg>
-      <span>How it works</span>
+    <a class="app-mobile-navigation__link{% if currentSection == 'teams' %} app-mobile-navigation__link--current{% endif %}" href="/teams"{% if currentSection == 'teams' %} aria-current="page"{% endif %}>
+      <svg class="app-mobile-navigation__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2M15 14h1a4 4 0 0 1 4 4v2"/></svg>
+      <span>Teams</span>
     </a>
   </nav>
 {% endblock %}
@@ -121,9 +121,10 @@
           >
         </a>
       </p>
-      <p class="govuk-body-s govuk-!-margin-bottom-0 app-footer__admin-link">
-        <a class="govuk-link" href="/admin/login">Administrator sign in</a>
-      </p>
+      <ul class="govuk-list govuk-!-margin-bottom-0 app-footer__links">
+        <li><a class="govuk-link" href="/about">How it works</a></li>
+        <li><a class="govuk-link" href="/admin/login">Administrator sign in</a></li>
+      </ul>
     </div>
   </footer>
 {% endblock %}

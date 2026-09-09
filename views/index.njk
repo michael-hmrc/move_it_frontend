@@ -16,7 +16,7 @@
         {{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}
       {% endif %}
 
-      <form action="/convert/name" method="post" novalidate>
+      <form action="/submit/name" method="post" novalidate>
         {{ govukInput({
           id: "displayName",
           name: "displayName",
