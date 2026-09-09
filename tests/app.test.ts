@@ -23,6 +23,7 @@ function teamsWith(overrides: Partial<TeamRepository> = {}): TeamRepository {
   return {
     getOverview: vi.fn().mockResolvedValue({ invitations: [] }),
     listAll: vi.fn().mockResolvedValue([]),
+    listMonthlyScores: vi.fn().mockResolvedValue([]),
     findById: vi.fn().mockResolvedValue(undefined),
     create: vi.fn().mockResolvedValue(undefined),
     join: vi.fn().mockResolvedValue(undefined),
@@ -636,6 +637,7 @@ describe("Move It application", () => {
     expect(response.text).toContain("3 of 5");
     expect(response.text).toContain("Steppers");
     expect(response.text).toContain("5 of 5");
+    expect(response.text).toContain('href="/teams/scoreboard"');
     expect(response.text).toContain(`href="/teams/${teamId}"`);
     expect(response.text).toContain("View<span class=\"govuk-visually-hidden\"> Movers team members</span>");
     expect(response.text).not.toContain("@opencastsoftware.com");
@@ -662,6 +664,34 @@ describe("Move It application", () => {
     expect(removedRoute.status).toBe(404);
   });
 
+  it("shows the monthly team scoreboard to signed-in users", async () => {
+    const teamId = "13845b5d-e982-4c7d-906c-9c32ed90d810";
+    const teamRepository = teamsWith({
+      listMonthlyScores: vi.fn().mockResolvedValue([
+        {
+          rank: 1,
+          teamId,
+          teamName: "Movers",
+          memberCount: 3,
+          totalSteps: 42000,
+          activityCount: 8
+        }
+      ])
+    });
+    const agent = request.agent(testApp(repositoryWith(), teamRepository));
+    await signIn(agent);
+
+    const response = await agent.get("/teams/scoreboard");
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Monthly team scoreboard");
+    expect(response.text).toContain("Movers");
+    expect(response.text).toContain("42000");
+    expect(response.text).toContain(`href="/teams/${teamId}"`);
+    expect(teamRepository.listMonthlyScores).toHaveBeenCalledWith(
+      expect.stringMatching(/^\d{4}-\d{2}-01$/)
+    );
+  });
+
   it("requires sign-in to view teams", async () => {
     const response = await request(testApp()).get("/teams");
 
@@ -671,6 +701,10 @@ describe("Move It application", () => {
     const teamResponse = await request(testApp()).get("/teams/13845b5d-e982-4c7d-906c-9c32ed90d810");
     expect(teamResponse.status).toBe(303);
     expect(teamResponse.headers.location).toBe("/login");
+
+    const scoreboardResponse = await request(testApp()).get("/teams/scoreboard");
+    expect(scoreboardResponse.status).toBe(303);
+    expect(scoreboardResponse.headers.location).toBe("/login");
   });
 
   it("shows a signed-in user their submitted activities", async () => {

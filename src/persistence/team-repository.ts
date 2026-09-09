@@ -37,9 +37,19 @@ export interface TeamDetails {
   members: TeamMember[];
 }
 
+export interface TeamScoreboardEntry {
+  rank: number;
+  teamId: string;
+  teamName: string;
+  memberCount: number;
+  totalSteps: number;
+  activityCount: number;
+}
+
 export interface TeamRepository {
   getOverview(userId: string): Promise<TeamOverview>;
   listAll(): Promise<TeamListItem[]>;
+  listMonthlyScores(monthStart: string): Promise<TeamScoreboardEntry[]>;
   findById(teamId: string): Promise<TeamDetails | undefined>;
   create(userId: string, name: string): Promise<void>;
   join(userId: string, teamId: string): Promise<void>;
@@ -59,6 +69,7 @@ export class TeamOperationError extends Error {
 class NoopTeamRepository implements TeamRepository {
   async getOverview(): Promise<TeamOverview> { return { invitations: [] }; }
   async listAll(): Promise<TeamListItem[]> { return []; }
+  async listMonthlyScores(): Promise<TeamScoreboardEntry[]> { return []; }
   async findById(): Promise<TeamDetails | undefined> { return undefined; }
   async create(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
   async join(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
@@ -164,6 +175,22 @@ class SupabaseTeamRepository implements TeamRepository {
       id: String(team.id),
       name: String(team.name),
       memberCount: counts.get(String(team.id)) ?? 0
+    }));
+  }
+
+  async listMonthlyScores(monthStart: string): Promise<TeamScoreboardEntry[]> {
+    const { data, error } = await this.client.rpc("monthly_team_scoreboard", {
+      requested_month: monthStart
+    });
+    if (error) throw new Error(`Could not load team scoreboard: ${error.message}`);
+
+    return (data ?? []).map((entry: Record<string, unknown>) => ({
+      rank: Number(entry.rank),
+      teamId: String(entry.team_id),
+      teamName: String(entry.team_name),
+      memberCount: Number(entry.member_count),
+      totalSteps: Number(entry.total_steps),
+      activityCount: Number(entry.activity_count)
     }));
   }
 

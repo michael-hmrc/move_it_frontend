@@ -1,0 +1,50 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageTitle = monthLabel + " team scoreboard - Move It" %}
+{% block beforeContent %}{{ govukBackLink({ href: "/teams", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <span class="govuk-caption-xl">{{ monthLabel }}</span>
+      <h1 class="govuk-heading-xl">Monthly team scoreboard</h1>
+
+      {{ govukInsetText({
+        text: "Team scores combine the estimated step equivalents submitted this month by their current members."
+      }) }}
+
+      {% if entries.length %}
+        {% set rows = [] %}
+        {% for entry in entries %}
+          {% set teamLink %}<a class="govuk-link" href="/teams/{{ entry.teamId }}">{{ entry.teamName }}</a>{% endset %}
+          {% set rows = (rows.push([
+            { text: entry.rank, format: "numeric" },
+            { html: teamLink },
+            { text: entry.memberCount | string, format: "numeric" },
+            { text: entry.totalSteps | string, format: "numeric" },
+            { text: entry.activityCount | string, format: "numeric" }
+          ]), rows) %}
+        {% endfor %}
+
+        <div class="app-table-scroll" role="region" aria-label="Monthly team scoreboard" tabindex="0">
+          {{ govukTable({
+            head: [
+              { text: "Rank", format: "numeric" },
+              { text: "Team" },
+              { text: "Members", format: "numeric" },
+              { text: "Estimated steps", format: "numeric" },
+              { text: "Activities", format: "numeric" }
+            ],
+            rows: rows
+          }) }}
+        </div>
+      {% else %}
+        <p class="govuk-body-l">No teams have submitted activities this month yet.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

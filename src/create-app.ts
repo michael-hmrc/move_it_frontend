@@ -569,6 +569,24 @@ export function createApp(
     catch (error) { return next(error); }
   });
 
+  app.get("/teams/scoreboard", async (request, response, next) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    const now = new Date();
+    const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+    const monthLabel = new Intl.DateTimeFormat("en-GB", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC"
+    }).format(now);
+
+    try {
+      return response.render("teams/scoreboard", {
+        entries: await teams.listMonthlyScores(monthStart),
+        monthLabel
+      });
+    } catch (error) { return next(error); }
+  });
+
   app.get("/teams/manage", async (request, response, next) => {
     const user = requireAuthenticatedUser(request, response);
     if (!user) return;
