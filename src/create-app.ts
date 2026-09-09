@@ -114,11 +114,9 @@ function renderInvalidCredentials(response: Response, email: string) {
   const message = "Enter a valid email address and password";
   return response.status(401).render("account/login", {
     values: { email },
-    credentialError: message,
-    errors: [
-      { text: message, href: "#email" },
-      { text: message, href: "#password" }
-    ]
+    errorMessage: message,
+    errorField: "email",
+    errors: [{ text: message, href: "#email" }]
   });
 }
 

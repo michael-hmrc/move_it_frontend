@@ -377,6 +377,10 @@ describe("Move It application", () => {
     expect(login.status).toBe(200);
     expect(login.text).toContain("Move It is for approved members");
     expect(login.text).toContain("Sign in");
+    expect(login.text).toContain('data-module="govuk-password-input"');
+    expect(login.text).toContain('aria-controls="password"');
+    expect(login.text).toContain('aria-label="Show password"');
+    expect(login.text).toContain("app-password-toggle");
     expect(signup.status).toBe(303);
     expect(signup.headers.location).toBe("/login");
   });
@@ -548,9 +552,9 @@ describe("Move It application", () => {
     expect(response.status).toBe(401);
     expect(response.text).toContain("Enter a valid email address and password");
     expect(response.text).toContain('href="#email"');
-    expect(response.text).toContain('href="#password"');
     expect(response.text).toContain('id="email-error"');
-    expect(response.text).toContain('id="password-error"');
+    expect(response.text).not.toContain('href="#password"');
+    expect(response.text).not.toContain('id="password-error"');
     expect(response.text).not.toContain("opencastsoftware.com");
     expect(authentication.signIn).not.toHaveBeenCalled();
   });
@@ -569,7 +573,7 @@ describe("Move It application", () => {
     expect(authentication.signIn).toHaveBeenCalledWith("alex@opencastsoftware.com", "wrong");
     expect(response.text).toContain("Enter a valid email address and password");
     expect(response.text).toContain('href="#email"');
-    expect(response.text).toContain('href="#password"');
+    expect(response.text).not.toContain('href="#password"');
     expect(response.text).not.toContain("Password must be at least");
     expect(response.text).not.toContain("Password must include");
   });
@@ -587,6 +591,8 @@ describe("Move It application", () => {
     expect(response.status).toBe(400);
     expect(response.text).toContain('href="#password"');
     expect(response.text).toContain("Password must be at least 12 characters");
+    expect(response.text).toContain('data-module="govuk-password-input"');
+    expect(response.text).toContain('aria-controls="password"');
   });
 
   it("attaches a display-name error to the problematic field", async () => {

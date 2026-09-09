@@ -313,6 +313,24 @@
   margin-bottom: govuk-spacing(6);
 }
 
+.app-password-toggle::before {
+  background-color: currentColor;
+  content: "";
+  display: inline-block;
+  height: 1em;
+  margin-right: govuk-spacing(1);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5C6.5 5 2 10.2 2 12s4.5 7 10 7 10-5.2 10-7-4.5-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  vertical-align: -0.125em;
+  width: 1em;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5C6.5 5 2 10.2 2 12s4.5 7 10 7 10-5.2 10-7-4.5-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
 @include govuk-media-query($until: tablet) {
   .app-question-page .govuk-label--xl,
   .app-question-page .govuk-fieldset__legend--xl,

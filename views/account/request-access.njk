@@ -1,6 +1,7 @@
 {% extends "layouts/main.njk" %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/password-input/macro.njk" import govukPasswordInput %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% block content %}
 <div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
@@ -9,6 +10,6 @@
 <form action="/request-access" method="post" novalidate>
 {{ govukInput({ id: "displayName", name: "displayName", value: values.displayName, label: { text: "Display name", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorField == "displayName" }) }}
 {{ govukInput({ id: "email", name: "email", type: "email", value: values.email, autocomplete: "email", label: { text: "Email address", classes: "govuk-label--m" }, errorMessage: { text: errorMessage } if errorField == "email" }) }}
-{{ govukInput({ id: "password", name: "password", type: "password", autocomplete: "new-password", label: { text: "Choose a password", classes: "govuk-label--m" }, hint: { text: "Use 12 or more characters, including an uppercase letter, number and symbol." }, errorMessage: { text: errorMessage } if errorField == "password" }) }}
+{{ govukPasswordInput({ id: "password", name: "password", autocomplete: "new-password", label: { text: "Choose a password", classes: "govuk-label--m" }, hint: { text: "Use 12 or more characters, including an uppercase letter, number and symbol." }, errorMessage: { text: errorMessage } if errorField == "password", button: { classes: "app-password-toggle" } }) }}
 {{ govukButton({ text: "Request access" }) }}</form>
 </div></div>{% endblock %}
