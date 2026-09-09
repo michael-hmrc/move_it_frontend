@@ -25,6 +25,7 @@ function teamsWith(overrides: Partial<TeamRepository> = {}): TeamRepository {
     listAll: vi.fn().mockResolvedValue([]),
     findById: vi.fn().mockResolvedValue(undefined),
     create: vi.fn().mockResolvedValue(undefined),
+    join: vi.fn().mockResolvedValue(undefined),
     invite: vi.fn().mockResolvedValue(undefined),
     respondToInvitation: vi.fn().mockResolvedValue(undefined),
     leave: vi.fn().mockResolvedValue(undefined),
@@ -505,10 +506,11 @@ describe("Move It application", () => {
   });
 
   it("shows a team and lets any member invite someone or disband it", async () => {
+    const teamId = "13845b5d-e982-4c7d-906c-9c32ed90d810";
     const teamRepository = teamsWith({
       getOverview: vi.fn().mockResolvedValue({
         team: {
-          id: "team-id",
+          id: teamId,
           name: "Movers",
           members: [
             { id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7", displayName: "Alex" },
@@ -517,6 +519,14 @@ describe("Move It application", () => {
           pendingInvitations: []
         },
         invitations: []
+      }),
+      findById: vi.fn().mockResolvedValue({
+        id: teamId,
+        name: "Movers",
+        members: [
+          { id: "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7", displayName: "Alex" },
+          { id: "member-id", displayName: "Sam" }
+        ]
       })
     });
     const agent = request.agent(testApp(repositoryWith(), teamRepository));
@@ -533,6 +543,10 @@ describe("Move It application", () => {
     expect(page.text).toContain("Send invitation");
     expect(page.text).toContain('href="/teams/leave"');
     expect(page.text).toContain('href="/teams/disband"');
+
+    const teamPage = await agent.get(`/teams/${teamId}`);
+    expect(teamPage.text).toContain('href="/teams/manage"');
+    expect(teamPage.text).not.toContain(`action="/teams/${teamId}/join"`);
 
     const createPage = await agent.get("/teams/create");
     expect(createPage.status).toBe(303);
@@ -631,8 +645,18 @@ describe("Move It application", () => {
     expect(teamPage.text).toContain("<h1 class=\"govuk-heading-xl\">Movers</h1>");
     expect(teamPage.text).toContain("Alex");
     expect(teamPage.text).toContain("Sam");
+    expect(teamPage.text).toContain(`action="/teams/${teamId}/join"`);
+    expect(teamPage.text).toContain("Join team");
     expect(teamPage.text).not.toContain("@opencastsoftware.com");
     expect(teamRepository.findById).toHaveBeenCalledWith(teamId);
+
+    const join = await agent.post(`/teams/${teamId}/join`);
+    expect(join.status).toBe(303);
+    expect(join.headers.location).toBe("/teams/manage");
+    expect(teamRepository.join).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      teamId
+    );
 
     const removedRoute = await agent.get("/teams/all");
     expect(removedRoute.status).toBe(404);

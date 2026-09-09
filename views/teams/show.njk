@@ -1,9 +1,11 @@
 {% extends "layouts/main.njk" %}
 
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 
-{% set pageTitle = team.name + " - Teams - Move It" %}
+{% set pageTitle = ("Error: " if errors else "") + team.name + " - Teams - Move It" %}
 {% block beforeContent %}{{ govukBackLink({ href: "/teams", text: "Back" }) }}{% endblock %}
 
 {% block content %}
@@ -11,6 +13,16 @@
     <div class="govuk-grid-column-two-thirds">
       <span class="govuk-caption-xl">Team</span>
       <h1 class="govuk-heading-xl">{{ team.name }}</h1>
+
+      {% if errors %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errors }) }}{% endif %}
+
+      {% if canJoin %}
+        <form id="join-team" action="/teams/{{ team.id }}/join" method="post">
+          {{ govukButton({ text: "Join team" }) }}
+        </form>
+      {% elif isCurrentTeam %}
+        {{ govukButton({ text: "Manage your team", href: "/teams/manage" }) }}
+      {% endif %}
 
       {% if team.members.length %}
         {% set rows = [] %}

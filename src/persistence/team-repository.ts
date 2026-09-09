@@ -42,6 +42,7 @@ export interface TeamRepository {
   listAll(): Promise<TeamListItem[]>;
   findById(teamId: string): Promise<TeamDetails | undefined>;
   create(userId: string, name: string): Promise<void>;
+  join(userId: string, teamId: string): Promise<void>;
   invite(userId: string, displayName: string): Promise<void>;
   respondToInvitation(userId: string, invitationId: string, accept: boolean): Promise<void>;
   leave(userId: string): Promise<void>;
@@ -60,6 +61,7 @@ class NoopTeamRepository implements TeamRepository {
   async listAll(): Promise<TeamListItem[]> { return []; }
   async findById(): Promise<TeamDetails | undefined> { return undefined; }
   async create(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
+  async join(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
   async invite(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
   async respondToInvitation(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
   async leave(): Promise<void> { throw new TeamOperationError("Teams are not configured"); }
@@ -198,6 +200,13 @@ class SupabaseTeamRepository implements TeamRepository {
     await this.call("create_move_it_team", { requesting_user_id: userId, requested_name: name });
   }
 
+  async join(userId: string, teamId: string): Promise<void> {
+    await this.call("join_move_it_team", {
+      requesting_user_id: userId,
+      requested_team_id: teamId
+    });
+  }
+
   async invite(userId: string, displayName: string): Promise<void> {
     await this.call("invite_move_it_team_member", {
       requesting_user_id: userId,
@@ -236,6 +245,7 @@ class SupabaseTeamRepository implements TeamRepository {
       "This user is already in a team",
       "This user already has a pending team invitation",
       "This team invitation is no longer available",
+      "This team is no longer available",
       "You are not in a team"
     ];
     const safeMessage = messages.find((message) => error.message.includes(message));

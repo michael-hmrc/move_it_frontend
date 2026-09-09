@@ -700,16 +700,47 @@ export function createApp(
   });
 
   app.get("/teams/:id", async (request, response, next) => {
-    if (!requireAuthenticatedUser(request, response)) return;
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request.params.id)) {
       return response.status(404).render("404");
     }
 
     try {
+      const [team, overview] = await Promise.all([
+        teams.findById(request.params.id),
+        teams.getOverview(user.id)
+      ]);
+      if (!team) return response.status(404).render("404");
+      return response.render("teams/show", {
+        team,
+        canJoin: !overview.team && team.members.length < 5,
+        isCurrentTeam: overview.team?.id === team.id
+      });
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/teams/:id/join", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request.params.id)) {
+      return response.status(404).render("404");
+    }
+
+    try {
+      await teams.join(user.id, request.params.id);
+      return response.redirect(303, "/teams/manage");
+    } catch (error) {
+      if (!(error instanceof TeamOperationError)) return next(error);
       const team = await teams.findById(request.params.id);
       if (!team) return response.status(404).render("404");
-      return response.render("teams/show", { team });
-    } catch (error) { return next(error); }
+      return response.status(400).render("teams/show", {
+        team,
+        canJoin: true,
+        isCurrentTeam: false,
+        errors: [{ text: error.message, href: "#join-team" }]
+      });
+    }
   });
 
   app.post("/login", async (request, response, next) => {
