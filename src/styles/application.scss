@@ -274,6 +274,10 @@
   margin-bottom: govuk-spacing(4);
 }
 
+.app-admin-delete-link {
+  color: govuk-colour("red");
+}
+
 @include govuk-media-query($until: tablet) {
   .app-table-scroll {
     -webkit-overflow-scrolling: touch;
@@ -311,6 +315,10 @@
 
 .app-question-page .govuk-button {
   margin-bottom: govuk-spacing(6);
+}
+
+.js-enabled .app-select-conditional--hidden {
+  display: none;
 }
 
 .app-password-toggle:not([hidden]) {

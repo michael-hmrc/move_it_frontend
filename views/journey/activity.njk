@@ -36,23 +36,30 @@
             isPageHeading: true
           },
           errorMessage: { text: errorMessage } if errorField == "activity",
+          attributes: {
+            "aria-controls": "other-activity-container",
+            "data-module": "app-conditional-select",
+            "data-conditional-value": "other"
+          },
           items: activityItems
         }) }}
 
-        {{ govukInput({
-          id: "otherActivity",
-          name: "otherActivity",
-          value: values.otherActivity,
-          label: {
-            text: "Other",
-            classes: "govuk-label--m"
-          },
-          hint: {
-            text: "If you chose Other, enter the activity."
-          },
-          maxlength: 50,
-          errorMessage: { text: errorMessage } if errorField == "otherActivity"
-        }) }}
+        <div id="other-activity-container" class="app-select-conditional{% if values.activity != 'other' %} app-select-conditional--hidden{% endif %}">
+          {{ govukInput({
+            id: "otherActivity",
+            name: "otherActivity",
+            value: values.otherActivity,
+            label: {
+              text: "Other",
+              classes: "govuk-label--m"
+            },
+            hint: {
+              text: "Enter the activity."
+            },
+            maxlength: 50,
+            errorMessage: { text: errorMessage } if errorField == "otherActivity"
+          }) }}
+        </div>
 
         {{ govukButton({ text: "Continue" }) }}
       </form>

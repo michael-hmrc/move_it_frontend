@@ -15,6 +15,7 @@ export interface AuthenticationService {
   approveUser(userId: string): Promise<void>;
   deactivateUser(userId: string): Promise<void>;
   reactivateUser(userId: string): Promise<void>;
+  deleteUser(userId: string): Promise<void>;
   listUsers(): Promise<AuthenticatedUser[]>;
 }
 
@@ -40,6 +41,7 @@ class UnavailableAuthenticationService implements AuthenticationService {
   async approveUser(): Promise<void> { return this.unavailable(); }
   async deactivateUser(): Promise<void> { return this.unavailable(); }
   async reactivateUser(): Promise<void> { return this.unavailable(); }
+  async deleteUser(): Promise<void> { return this.unavailable(); }
   async listUsers(): Promise<AuthenticatedUser[]> { return this.unavailable(); }
 }
 
@@ -159,6 +161,11 @@ class SupabaseAuthenticationService implements AuthenticationService {
   async reactivateUser(userId: string): Promise<void> {
     const { error } = await this.adminClient.from("app_users").update({ status: "approved" }).eq("id", userId);
     if (error) throw new Error(`Could not reactivate account: ${error.message}`);
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const { error } = await this.adminClient.auth.admin.deleteUser(userId);
+    if (error) throw new Error(`Could not delete account: ${error.message}`);
   }
 
   async listUsers(): Promise<AuthenticatedUser[]> {

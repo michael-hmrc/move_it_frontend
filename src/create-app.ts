@@ -641,6 +641,23 @@ export function createApp(
     } catch (error) { return next(error); }
   });
 
+  app.get("/admin/users/:id/delete", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try {
+      const user = (await authentication.listUsers()).find(({ id }) => id === request.params.id);
+      if (!user) return response.status(404).render("404");
+      return response.render("account/delete-user", { user });
+    } catch (error) { return next(error); }
+  });
+
+  app.post("/admin/users/:id/delete", async (request, response, next) => {
+    if (!requireAdmin(request, response)) return;
+    try {
+      await authentication.deleteUser(request.params.id);
+      return response.redirect(303, "/admin");
+    } catch (error) { return next(error); }
+  });
+
   app.get("/signup", (_request, response) => {
     response.redirect(303, "/login");
   });

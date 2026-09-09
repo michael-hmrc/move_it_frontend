@@ -31,6 +31,7 @@ const authentication: AuthenticationService = {
   approveUser: vi.fn().mockResolvedValue(undefined),
   deactivateUser: vi.fn().mockResolvedValue(undefined),
   reactivateUser: vi.fn().mockResolvedValue(undefined),
+  deleteUser: vi.fn().mockResolvedValue(undefined),
   listUsers: vi.fn().mockResolvedValue([])
 };
 
@@ -150,6 +151,9 @@ describe("Move It application", () => {
     expect(missingOtherActivity.text).toContain("Enter the other activity");
     expect(missingOtherActivity.text).toContain('href="#otherActivity"');
     expect(missingOtherActivity.text).toContain('id="otherActivity-error"');
+    expect(missingOtherActivity.text).toContain(
+      'id="other-activity-container" class="app-select-conditional"'
+    );
 
     await agent.post("/convert/activity").type("form").send({ activity: "football" });
 
@@ -190,6 +194,11 @@ describe("Move It application", () => {
 
     const activityPage = await agent.get("/convert/activity");
     expect(activityPage.text).toContain('<option value="other">Other</option>');
+    expect(activityPage.text).toContain('data-module="app-conditional-select"');
+    expect(activityPage.text).toContain('aria-controls="other-activity-container"');
+    expect(activityPage.text).toContain(
+      'id="other-activity-container" class="app-select-conditional app-select-conditional--hidden"'
+    );
     expect(activityPage.text).toContain('for="otherActivity"');
     expect(activityPage.text).toContain("Other");
 
@@ -201,7 +210,7 @@ describe("Move It application", () => {
     expect(activityResponse.headers.location).toBe("/convert/intensity");
 
     const intensityPage = await agent.get("/convert/intensity");
-    expect(intensityPage.text).toContain("How intense was your pilates activity?");
+    expect(intensityPage.text).toContain("How intense was your pilates session?");
   });
 
   it("completes the multi-page journey and persists the result", async () => {
@@ -745,6 +754,56 @@ describe("Move It application", () => {
       if (priorToken === undefined) delete process.env.ADMIN_ACCESS_TOKEN;
       else process.env.ADMIN_ACCESS_TOKEN = priorToken;
     }
+  });
+
+  it("lets an administrator permanently delete a user after confirmation", async () => {
+    const priorToken = process.env.ADMIN_ACCESS_TOKEN;
+    process.env.ADMIN_ACCESS_TOKEN = "test-admin-token";
+    const user = {
+      id: "2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      email: "sam@opencastsoftware.com",
+      displayName: "Sam",
+      mustChangePassword: false,
+      status: "deactivated" as const
+    };
+    vi.mocked(authentication.listUsers).mockResolvedValue([user]);
+    const agent = request.agent(testApp());
+
+    try {
+      await agent.post("/admin/login").type("form").send({ adminAccessToken: "test-admin-token" });
+
+      const page = await agent.get("/admin");
+      expect(page.status).toBe(200);
+      expect(page.text).toContain("Manage access");
+      expect(page.text).toContain("Delete account");
+      expect(page.text).toContain(`/admin/users/${user.id}/delete`);
+      expect(page.text).toContain("Delete");
+
+      const confirmation = await agent.get(`/admin/users/${user.id}/delete`);
+      expect(confirmation.status).toBe(200);
+      expect(confirmation.text).toContain("Delete this account?");
+      expect(confirmation.text).toContain("sam@opencastsoftware.com");
+      expect(confirmation.text).toContain("all activities they have submitted");
+      expect(confirmation.text).toContain("This cannot be undone");
+
+      const deletion = await agent.post(`/admin/users/${user.id}/delete`);
+      expect(deletion.status).toBe(303);
+      expect(deletion.headers.location).toBe("/admin");
+      expect(authentication.deleteUser).toHaveBeenCalledWith(user.id);
+    } finally {
+      if (priorToken === undefined) delete process.env.ADMIN_ACCESS_TOKEN;
+      else process.env.ADMIN_ACCESS_TOKEN = priorToken;
+    }
+  });
+
+  it("does not expose account deletion to non-administrators", async () => {
+    const response = await request(testApp()).get(
+      "/admin/users/2e1e9d8-6dce-4cb1-9a07-71c1e884c1b7/delete"
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/admin/login");
+    expect(authentication.deleteUser).not.toHaveBeenCalled();
   });
 
   it("does not sign in a deactivated user", async () => {

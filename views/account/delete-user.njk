@@ -1,0 +1,34 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = "Delete account - Move It" %}
+
+{% block beforeContent %}<a class="govuk-back-link" href="/admin">Back</a>{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Delete this account?</h1>
+
+      {{ govukSummaryList({ rows: [
+        { key: { text: "Display name" }, value: { text: user.displayName } },
+        { key: { text: "Email address" }, value: { text: user.email } },
+        { key: { text: "Status" }, value: { text: user.status | capitalize } }
+      ] }) }}
+
+      {{ govukWarningText({
+        text: "Deleting this account will permanently remove the user and all activities they have submitted. This cannot be undone.",
+        iconFallbackText: "Warning"
+      }) }}
+
+      <form action="/admin/users/{{ user.id }}/delete" method="post">
+        {{ govukButton({ text: "Delete account", classes: "govuk-button--warning" }) }}
+      </form>
+
+      <p class="govuk-body"><a class="govuk-link" href="/admin">Cancel</a></p>
+    </div>
+  </div>
+{% endblock %}
