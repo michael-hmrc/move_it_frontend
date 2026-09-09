@@ -4,6 +4,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 
 {% set pageTitle = ("Error: " if errors else "") + "How intense was the activity? - Move It" %}
 
@@ -25,15 +26,26 @@
         }), intensityItems) %}
       {% endfor %}
 
+      {% set intensityInset %}
+        {{ govukInsetText({
+          text: "Intensity is self declared but we trust you to be honest ;)"
+        }) }}
+      {% endset %}
+
       <form action="{{ formAction }}" method="post" novalidate>
         {{ govukRadios({
           idPrefix: "intensity",
           name: "intensity",
           fieldset: {
             legend: {
-              text: "How intense was your " + (activityName | lower) + "?",
+              text: "How intense was your " + (activityName | lower) + " activity" + "?",
               classes: "govuk-fieldset__legend--xl",
               isPageHeading: true
+            }
+          },
+          formGroup: {
+            beforeInputs: {
+              html: intensityInset
             }
           },
           errorMessage: { text: errorMessage } if errorMessage,

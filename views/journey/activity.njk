@@ -3,6 +3,7 @@
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 
 {% set pageTitle = ("Error: " if errors else "") + "What activity did you do? - Move It" %}
@@ -34,8 +35,23 @@
             classes: "govuk-label--xl",
             isPageHeading: true
           },
-          errorMessage: { text: errorMessage } if errorMessage,
+          errorMessage: { text: errorMessage } if errorField == "activity",
           items: activityItems
+        }) }}
+
+        {{ govukInput({
+          id: "otherActivity",
+          name: "otherActivity",
+          value: values.otherActivity,
+          label: {
+            text: "Other",
+            classes: "govuk-label--m"
+          },
+          hint: {
+            text: "If you chose Other, enter the activity."
+          },
+          maxlength: 50,
+          errorMessage: { text: errorMessage } if errorField == "otherActivity"
         }) }}
 
         {{ govukButton({ text: "Continue" }) }}

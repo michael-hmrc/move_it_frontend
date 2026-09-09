@@ -35,7 +35,7 @@
   {% set accountLinks %}
     <nav class="app-service-account" aria-label="Account">
       {% if currentUser %}
-        <span class="app-service-account__name">{{ currentUser.displayName }}</span>
+        <a class="govuk-link app-service-account__name" href="/account"{% if currentSection == "account" %} aria-current="page"{% endif %}>{{ currentUser.displayName }}</a>
         <form action="/logout" method="post">
           <button class="app-service-account__button" type="submit">Sign out</button>
         </form>

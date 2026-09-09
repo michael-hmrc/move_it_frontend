@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   activitySchema,
+  changePasswordSchema,
   displayNameSchema,
   durationSchema,
   intensitySchema,
-  passwordSchema
+  passwordSchema,
+  signInPasswordSchema
 } from "../src/domain/validation.js";
 
 function firstError(result: { success: boolean; error?: { issues: Array<{ message: string }> } }) {
@@ -30,7 +32,14 @@ describe("display name validation", () => {
 
 describe("journey selection validation", () => {
   it("accepts configured values", () => {
-    expect(activitySchema.parse({ activity: "football" })).toEqual({ activity: "football" });
+    expect(activitySchema.parse({ activity: "football" })).toEqual({
+      activity: "football",
+      otherActivity: ""
+    });
+    expect(activitySchema.parse({ activity: "other", otherActivity: "  Pilates  " })).toEqual({
+      activity: "other",
+      otherActivity: "Pilates"
+    });
     expect(intensitySchema.parse({ intensity: "moderate" })).toEqual({ intensity: "moderate" });
   });
 
@@ -39,6 +48,13 @@ describe("journey selection validation", () => {
     expect(firstError(activitySchema.safeParse({ activity: "quidditch" }))).toBe("Select an activity");
     expect(firstError(intensitySchema.safeParse({}))).toBe("Select an intensity");
     expect(firstError(intensitySchema.safeParse({ intensity: "extreme" }))).toBe("Select an intensity");
+  });
+
+  it("requires a name when Other is selected", () => {
+    const result = activitySchema.safeParse({ activity: "other", otherActivity: "" });
+
+    expect(firstError(result)).toBe("Enter the other activity");
+    expect(result.error?.issues[0]?.path).toEqual(["otherActivity"]);
   });
 });
 
@@ -64,6 +80,11 @@ describe("duration validation", () => {
 });
 
 describe("password validation", () => {
+  it("does not reveal password strength rules during sign-in validation", () => {
+    expect(signInPasswordSchema.safeParse({ password: "wrong" }).success).toBe(true);
+    expect(firstError(signInPasswordSchema.safeParse({ password: "" }))).toBe("Enter your password");
+  });
+
   it("accepts a password with the required character types", () => {
     expect(passwordSchema.parse({ password: "MoveItPassword1!" })).toEqual({
       password: "MoveItPassword1!"
@@ -76,5 +97,15 @@ describe("password validation", () => {
     ["PasswordWithoutSymbol1", "Password must include a symbol"]
   ])("rejects missing required characters", (password, message) => {
     expect(firstError(passwordSchema.safeParse({ password }))).toBe(message);
+  });
+
+  it("requires matching new passwords when changing a password", () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: "MoveItPassword1!",
+      newPassword: "MoveItPassword2!",
+      confirmPassword: "MoveItPassword3!"
+    });
+
+    expect(firstError(result)).toBe("Passwords do not match");
   });
 });

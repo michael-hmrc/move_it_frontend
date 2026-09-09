@@ -20,22 +20,53 @@ export const emailSchema = z.object({
     .email("Enter an email address")
 });
 
+const passwordValueSchema = z
+  .string({ error: "Enter a password" })
+  .min(12, "Password must be at least 12 characters")
+  .max(128, "Password must be 128 characters or fewer")
+  .regex(/[A-Z]/, "Password must include an uppercase letter")
+  .regex(/[0-9]/, "Password must include a number")
+  .regex(/[^A-Za-z0-9]/, "Password must include a symbol");
+
 export const passwordSchema = z.object({
-  password: z
-    .string({ error: "Enter a password" })
-    .min(12, "Password must be at least 12 characters")
-    .max(128, "Password must be 128 characters or fewer")
-    .regex(/[A-Z]/, "Password must include an uppercase letter")
-    .regex(/[0-9]/, "Password must include a number")
-    .regex(/[^A-Za-z0-9]/, "Password must include a symbol")
+  password: passwordValueSchema
 });
 
-export const activitySchema = z.object({
-  activity: z.preprocess(
-    (value) => value ?? "",
-    z.string().refine(isActivityId, "Select an activity")
-  )
+export const signInPasswordSchema = z.object({
+  password: z.string({ error: "Enter your password" }).min(1, "Enter your password")
 });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string({ error: "Enter your current password" }).min(1, "Enter your current password"),
+    newPassword: passwordValueSchema,
+    confirmPassword: z.string({ error: "Confirm your new password" }).min(1, "Confirm your new password")
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"]
+  });
+
+export const activitySchema = z
+  .object({
+    activity: z.preprocess(
+      (value) => value ?? "",
+      z.string().refine(isActivityId, "Select an activity")
+    ),
+    otherActivity: z.preprocess(
+      (value) => typeof value === "string" ? value.trim() : "",
+      z.string().max(50, "Other activity must be 50 characters or fewer")
+    )
+  })
+  .superRefine((values, context) => {
+    if (values.activity === "other" && values.otherActivity.length < 2) {
+      context.addIssue({
+        code: "custom",
+        message: "Enter the other activity",
+        path: ["otherActivity"]
+      });
+    }
+  });
 
 export const intensitySchema = z.object({
   intensity: z.preprocess(

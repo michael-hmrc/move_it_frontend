@@ -10,6 +10,7 @@ export interface AuthenticatedUser {
 
 export interface AuthenticationService {
   signIn(email: string, password: string): Promise<AuthenticatedUser>;
+  changePassword(userId: string, email: string, currentPassword: string, newPassword: string): Promise<void>;
   requestAccess(email: string, displayName: string, password: string): Promise<void>;
   approveUser(userId: string): Promise<void>;
   deactivateUser(userId: string): Promise<void>;
@@ -17,9 +18,24 @@ export interface AuthenticationService {
   listUsers(): Promise<AuthenticatedUser[]>;
 }
 
+export class IncorrectPasswordError extends Error {
+  constructor() {
+    super("Enter your current password correctly");
+    this.name = "IncorrectPasswordError";
+  }
+}
+
+export class DisplayNameTakenError extends Error {
+  constructor() {
+    super("Choose a different display name");
+    this.name = "DisplayNameTakenError";
+  }
+}
+
 class UnavailableAuthenticationService implements AuthenticationService {
   private unavailable(): never { throw new Error("Authentication is not configured"); }
   async signIn(): Promise<AuthenticatedUser> { return this.unavailable(); }
+  async changePassword(): Promise<void> { return this.unavailable(); }
   async requestAccess(): Promise<void> { return this.unavailable(); }
   async approveUser(): Promise<void> { return this.unavailable(); }
   async deactivateUser(): Promise<void> { return this.unavailable(); }
@@ -94,7 +110,39 @@ class SupabaseAuthenticationService implements AuthenticationService {
     });
     if (profileError) {
       await this.adminClient.auth.admin.deleteUser(data.user.id);
+      if (profileError.code === "23505") throw new DisplayNameTakenError();
       throw new Error(`Could not create account: ${profileError.message}`);
+    }
+  }
+
+  async changePassword(
+    userId: string,
+    email: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
+    const { data, error: signInError } = await this.authClient.auth.signInWithPassword({
+      email,
+      password: currentPassword
+    });
+    if (signInError || data.user?.id !== userId) throw new IncorrectPasswordError();
+
+    const { error: updateError } = await this.adminClient.auth.admin.updateUserById(userId, {
+      password: newPassword
+    });
+    if (updateError) throw new Error(`Could not change password: ${updateError.message}`);
+
+    const { error: profileError } = await this.adminClient
+      .from("app_users")
+      .update({ must_change_password: false })
+      .eq("id", userId);
+    if (profileError) {
+      console.error("Password changed but the Move It profile could not be updated", {
+        userId,
+        projectUrl: this.projectUrl,
+        code: profileError.code,
+        message: profileError.message
+      });
     }
   }
 

@@ -19,11 +19,16 @@
       {% if entries.length %}
         {% set rows = [] %}
         {% for entry in entries %}
+          {% set activityCountLink %}
+            <a class="govuk-link" href="{{ entry.activitiesHref }}">
+              View<span class="govuk-visually-hidden"> activities submitted by {{ entry.displayName }}</span>
+            </a>
+          {% endset %}
           {% set rows = (rows.push([
             { text: entry.rank, format: "numeric" },
             { text: entry.displayName },
             { text: entry.totalSteps | string, format: "numeric" },
-            { text: entry.activityCount, format: "numeric" }
+            { html: activityCountLink, format: "numeric" }
           ]), rows) %}
         {% endfor %}
 

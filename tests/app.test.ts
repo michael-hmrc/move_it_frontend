@@ -1,13 +1,19 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/create-app.js";
-import type { AuthenticationService } from "../src/persistence/authentication.js";
+import {
+  DisplayNameTakenError,
+  IncorrectPasswordError,
+  type AuthenticationService
+} from "../src/persistence/authentication.js";
 import type { ConversionRepository } from "../src/persistence/conversion-repository.js";
 
 function repositoryWith(overrides: Partial<ConversionRepository> = {}): ConversionRepository {
   return {
     save: vi.fn().mockResolvedValue(undefined),
     listMonthly: vi.fn().mockResolvedValue([]),
+    listForUser: vi.fn().mockResolvedValue([]),
+    listForDisplayName: vi.fn().mockResolvedValue([]),
     ...overrides
   };
 }
@@ -20,6 +26,7 @@ const authentication: AuthenticationService = {
     mustChangePassword: false,
     status: "approved"
   }),
+  changePassword: vi.fn().mockResolvedValue(undefined),
   requestAccess: vi.fn().mockResolvedValue(undefined),
   approveUser: vi.fn().mockResolvedValue(undefined),
   deactivateUser: vi.fn().mockResolvedValue(undefined),
@@ -127,6 +134,15 @@ describe("Move It application", () => {
     expect(invalidActivity.status).toBe(400);
     expect(invalidActivity.text).toContain("Select an activity");
 
+    const missingOtherActivity = await agent
+      .post("/convert/activity")
+      .type("form")
+      .send({ activity: "other", otherActivity: "" });
+    expect(missingOtherActivity.status).toBe(400);
+    expect(missingOtherActivity.text).toContain("Enter the other activity");
+    expect(missingOtherActivity.text).toContain('href="#otherActivity"');
+    expect(missingOtherActivity.text).toContain('id="otherActivity-error"');
+
     await agent.post("/convert/activity").type("form").send({ activity: "football" });
 
     const invalidIntensity = await agent
@@ -160,6 +176,26 @@ describe("Move It application", () => {
     expect(excessiveDuration.text).toContain("Duration must be 1,440 minutes or less");
   });
 
+  it("retains the name of an Other activity", async () => {
+    const agent = request.agent(testApp());
+    await signIn(agent);
+
+    const activityPage = await agent.get("/convert/activity");
+    expect(activityPage.text).toContain('<option value="other">Other</option>');
+    expect(activityPage.text).toContain('for="otherActivity"');
+    expect(activityPage.text).toContain("Other");
+
+    const activityResponse = await agent
+      .post("/convert/activity")
+      .type("form")
+      .send({ activity: "other", otherActivity: "Pilates" });
+    expect(activityResponse.status).toBe(303);
+    expect(activityResponse.headers.location).toBe("/convert/intensity");
+
+    const intensityPage = await agent.get("/convert/intensity");
+    expect(intensityPage.text).toContain("How intense was your pilates activity?");
+  });
+
   it("completes the multi-page journey and persists the result", async () => {
     const repository = repositoryWith();
     const agent = request.agent(testApp(repository));
@@ -175,7 +211,12 @@ describe("Move It application", () => {
     expect(activityResponse.headers.location).toBe("/convert/intensity");
 
     const intensityPage = await agent.get("/convert/intensity");
-    expect(intensityPage.text).toContain("How intense was your swimming?");
+    expect(intensityPage.text).toContain("How intense was your swimming activity?");
+    const intensityHeadingPosition = intensityPage.text.indexOf("How intense was your swimming activity?");
+    const intensityInsetPosition = intensityPage.text.indexOf("Intensity is self declared");
+    const intensityOptionPosition = intensityPage.text.indexOf('class="govuk-radios__item"');
+    expect(intensityInsetPosition).toBeGreaterThan(intensityHeadingPosition);
+    expect(intensityOptionPosition).toBeGreaterThan(intensityInsetPosition);
 
     const intensityResponse = await agent
       .post("/convert/intensity")
@@ -255,7 +296,43 @@ describe("Move It application", () => {
     expect(response.text).toContain("Monthly scoreboard");
     expect(response.text).toContain("Morgan");
     expect(response.text).toContain("8400");
+    expect(response.text).toContain('href="/users/Morgan/activities"');
+    expect(response.text).toContain("View<span class=\"govuk-visually-hidden\"> activities submitted by Morgan</span>");
     expect(response.text).not.toContain("There are no recorded activities this month yet.");
+  });
+
+  it("shows another user's activities from the monthly scoreboard", async () => {
+    const repository = repositoryWith({
+      listForDisplayName: vi.fn().mockResolvedValue([{
+        id: "record-id",
+        activityName: "Running",
+        intensity: "vigorous",
+        durationMinutes: 20,
+        estimatedSteps: 4600,
+        createdAt: "2026-09-08T09:00:00.000Z"
+      }])
+    });
+    const agent = request.agent(testApp(repository));
+    await signIn(agent);
+
+    const response = await agent.get("/users/Morgan/activities");
+
+    expect(response.status).toBe(200);
+    expect(repository.listForDisplayName).toHaveBeenCalledWith("Morgan");
+    expect(response.text).toContain("Activities submitted by Morgan");
+    expect(response.text).toContain("8 September 2026");
+    expect(response.text).toContain("Running");
+    expect(response.text).toContain("Vigorous");
+    expect(response.text).toContain("20 minutes");
+    expect(response.text).toContain("4600");
+    expect(response.text).toContain('href="/scoreboard"');
+  });
+
+  it("requires sign-in to view another user's activities", async () => {
+    const response = await request(testApp()).get("/users/Morgan/activities");
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/login");
   });
 
   it("renders an empty scoreboard when there are no saved entries", async () => {
@@ -317,6 +394,7 @@ describe("Move It application", () => {
 
     const signedIn = await agent.get("/");
     expect(signedIn.text).toContain("Alex");
+    expect(signedIn.text).toContain('href="/account"');
     expect(signedIn.text).toContain("Sign out");
 
     const logout = await agent.post("/logout").type("form").send({});
@@ -327,14 +405,173 @@ describe("Move It application", () => {
     expect(signedOut.text).not.toContain("Sign out");
   });
 
-  it("rejects a non-Opencast email address", async () => {
+  it("lets a signed-in user view their account details", async () => {
+    const agent = request.agent(testApp());
+    await signIn(agent);
+
+    const response = await agent.get("/account");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Your account");
+    expect(response.text).toContain("Display name");
+    expect(response.text).toContain("Alex");
+    expect(response.text).toContain("Email address");
+    expect(response.text).toContain("alex@opencastsoftware.com");
+    expect(response.text).toContain('href="/account/activities"');
+    expect(response.text).toContain('href="/account/change-password"');
+    expect(response.text).toContain('href="/account" aria-current="page"');
+  });
+
+  it("shows a signed-in user their submitted activities", async () => {
+    const repository = repositoryWith({
+      listForUser: vi.fn().mockResolvedValue([{
+        id: "record-id",
+        activityName: "Pilates",
+        intensity: "moderate",
+        durationMinutes: 30,
+        estimatedSteps: 3900,
+        createdAt: "2026-09-09T10:30:00.000Z"
+      }])
+    });
+    const agent = request.agent(testApp(repository));
+    await signIn(agent);
+
+    const response = await agent.get("/account/activities");
+
+    expect(response.status).toBe(200);
+    expect(repository.listForUser).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7"
+    );
+    expect(response.text).toContain("Your submitted activities");
+    expect(response.text).toContain("Showing the latest 50 submissions.");
+    expect(response.text).toContain("9 September 2026");
+    expect(response.text).toContain("Pilates");
+    expect(response.text).toContain("Moderate");
+    expect(response.text).toContain("30 minutes");
+    expect(response.text).toContain("3900");
+  });
+
+  it("shows an empty activity history and protects it from anonymous users", async () => {
+    const agent = request.agent(testApp());
+    await signIn(agent);
+
+    const emptyHistory = await agent.get("/account/activities");
+    expect(emptyHistory.status).toBe(200);
+    expect(emptyHistory.text).toContain("You have not submitted any activities yet.");
+
+    const anonymousHistory = await request(testApp()).get("/account/activities");
+    expect(anonymousHistory.status).toBe(303);
+    expect(anonymousHistory.headers.location).toBe("/login");
+  });
+
+  it("requires sign-in to view account details", async () => {
+    const response = await request(testApp()).get("/account");
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/login");
+  });
+
+  it("lets a signed-in user change their password", async () => {
+    const agent = request.agent(testApp());
+    await signIn(agent);
+
+    const page = await agent.get("/account/change-password");
+    expect(page.status).toBe(200);
+    expect(page.text).toContain("Current password");
+    expect(page.text).toContain("New password");
+    expect(page.text).toContain("Confirm new password");
+
+    const response = await agent.post("/account/change-password").type("form").send({
+      currentPassword: "A-safe-test-password1!",
+      newPassword: "A-new-safe-password2!",
+      confirmPassword: "A-new-safe-password2!"
+    });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/account/password-changed");
+    expect(authentication.changePassword).toHaveBeenCalledWith(
+      "9c81e9d8-6dce-4cb1-9a07-71c1e884c1b7",
+      "alex@opencastsoftware.com",
+      "A-safe-test-password1!",
+      "A-new-safe-password2!"
+    );
+
+    const confirmation = await agent.get(response.headers.location);
+    expect(confirmation.text).toContain("Password changed");
+  });
+
+  it("validates that the new passwords match", async () => {
+    const agent = request.agent(testApp());
+    await signIn(agent);
+
+    const response = await agent.post("/account/change-password").type("form").send({
+      currentPassword: "A-safe-test-password1!",
+      newPassword: "A-new-safe-password2!",
+      confirmPassword: "A-different-password3!"
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain("Passwords do not match");
+    expect(response.text).toContain('href="#confirmPassword"');
+    expect(authentication.changePassword).not.toHaveBeenCalled();
+  });
+
+  it("shows an error when the current password is incorrect", async () => {
+    vi.mocked(authentication.changePassword).mockRejectedValueOnce(new IncorrectPasswordError());
+    const agent = request.agent(testApp());
+    await signIn(agent);
+
+    const response = await agent.post("/account/change-password").type("form").send({
+      currentPassword: "An-incorrect-password1!",
+      newPassword: "A-new-safe-password2!",
+      confirmPassword: "A-new-safe-password2!"
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain("Enter your current password correctly");
+    expect(response.text).toContain('href="#currentPassword"');
+  });
+
+  it("requires sign-in to change a password", async () => {
+    const response = await request(testApp()).get("/account/change-password");
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/login");
+  });
+
+  it("silently rejects a non-allowed email address at sign-in", async () => {
     const response = await request(testApp())
       .post("/login")
       .type("form")
       .send({ email: "alex@example.com", password: "A-safe-test-password1!" });
 
-    expect(response.status).toBe(400);
-    expect(response.text).toContain("@opencastsoftware.com");
+    expect(response.status).toBe(401);
+    expect(response.text).toContain("Enter a valid email address and password");
+    expect(response.text).toContain('href="#email"');
+    expect(response.text).toContain('href="#password"');
+    expect(response.text).toContain('id="email-error"');
+    expect(response.text).toContain('id="password-error"');
+    expect(response.text).not.toContain("opencastsoftware.com");
+    expect(authentication.signIn).not.toHaveBeenCalled();
+  });
+
+  it("does not reveal password strength rules when sign-in fails", async () => {
+    vi.mocked(authentication.signIn).mockRejectedValueOnce(
+      new Error("Password must be at least 12 characters")
+    );
+
+    const response = await request(testApp()).post("/login").type("form").send({
+      email: "alex@opencastsoftware.com",
+      password: "wrong"
+    });
+
+    expect(response.status).toBe(401);
+    expect(authentication.signIn).toHaveBeenCalledWith("alex@opencastsoftware.com", "wrong");
+    expect(response.text).toContain("Enter a valid email address and password");
+    expect(response.text).toContain('href="#email"');
+    expect(response.text).toContain('href="#password"');
+    expect(response.text).not.toContain("Password must be at least");
+    expect(response.text).not.toContain("Password must include");
   });
 
   it("anchors a short access-request password error to the password input", async () => {
@@ -350,6 +587,56 @@ describe("Move It application", () => {
     expect(response.status).toBe(400);
     expect(response.text).toContain('href="#password"');
     expect(response.text).toContain("Password must be at least 12 characters");
+  });
+
+  it("attaches a display-name error to the problematic field", async () => {
+    const response = await request(testApp())
+      .post("/request-access")
+      .type("form")
+      .send({
+        displayName: "A",
+        email: "alex@opencastsoftware.com",
+        password: "A-safe-test-password1!"
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain('href="#displayName"');
+    expect(response.text).toContain('id="displayName-error"');
+    expect(response.text).toContain('aria-describedby="displayName-error"');
+    expect(response.text).toContain("govuk-input--error");
+    expect(response.text).toContain("Display name must be at least 2 characters");
+  });
+
+  it("attaches a duplicate display-name error to the problematic field", async () => {
+    vi.mocked(authentication.requestAccess).mockRejectedValueOnce(new DisplayNameTakenError());
+
+    const response = await request(testApp())
+      .post("/request-access")
+      .type("form")
+      .send({
+        displayName: "Alex",
+        email: "another.user@opencastsoftware.com",
+        password: "A-safe-test-password1!"
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toContain('href="#displayName"');
+    expect(response.text).toContain('id="displayName-error"');
+    expect(response.text).toContain("govuk-input--error");
+    expect(response.text).toContain("Choose a different display name");
+  });
+
+  it("silently discards an access request from a non-allowed domain", async () => {
+    const response = await request(testApp()).post("/request-access").type("form").send({
+      displayName: "Alex",
+      email: "alex@example.com",
+      password: "A-safe-test-password1!"
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Access request sent");
+    expect(response.text).not.toContain("opencastsoftware.com");
+    expect(authentication.requestAccess).not.toHaveBeenCalled();
   });
 
   it("does not permit administrator access without the configured token", async () => {

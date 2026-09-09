@@ -21,6 +21,26 @@ describe("convertActivityToSteps", () => {
     });
   });
 
+  it("uses the entered name for an Other activity", () => {
+    expect(
+      convertActivityToSteps({
+        displayName: "Alex",
+        activity: "other",
+        otherActivity: "Pilates",
+        intensity: "moderate",
+        durationMinutes: 30
+      })
+    ).toEqual({
+      displayName: "Alex",
+      activity: "other",
+      otherActivity: "Pilates",
+      activityName: "Pilates",
+      intensity: "moderate",
+      durationMinutes: 30,
+      estimatedSteps: 3900
+    });
+  });
+
   const cases = activities.flatMap((activity) =>
     intensities.map((intensity) => ({ activity, intensity }))
   );

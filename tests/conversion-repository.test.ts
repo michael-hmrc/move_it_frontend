@@ -5,9 +5,13 @@ import { createConversionRepository } from "../src/persistence/conversion-reposi
 
 const supabase = vi.hoisted(() => {
   const insert = vi.fn();
-  const from = vi.fn(() => ({ insert }));
+  const limit = vi.fn();
+  const order = vi.fn(() => ({ limit }));
+  const eq = vi.fn(() => ({ order }));
+  const select = vi.fn(() => ({ eq }));
+  const from = vi.fn(() => ({ insert, select }));
   const rpc = vi.fn();
-  return { from, insert, rpc };
+  return { from, insert, select, eq, order, limit, rpc };
 });
 
 vi.mock("@supabase/supabase-js", () => ({
@@ -34,6 +38,7 @@ describe("conversion repository", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     supabase.insert.mockResolvedValue({ error: null });
+    supabase.limit.mockResolvedValue({ data: [], error: null });
     supabase.rpc.mockResolvedValue({ data: [], error: null });
   });
 
@@ -42,6 +47,8 @@ describe("conversion repository", () => {
 
     await expect(repository.save(result, "user-id")).resolves.toBeUndefined();
     await expect(repository.listMonthly("2026-08-01")).resolves.toEqual([]);
+    await expect(repository.listForUser("user-id")).resolves.toEqual([]);
+    await expect(repository.listForDisplayName("Alex")).resolves.toEqual([]);
     expect(createClient).not.toHaveBeenCalled();
   });
 
@@ -60,6 +67,50 @@ describe("conversion repository", () => {
       user_id: "user-id",
       display_name: "Alex",
       activity: "football",
+      other_activity: null,
+      intensity: "moderate",
+      duration_minutes: 30,
+      estimated_steps: 4500
+    });
+  });
+
+  it("stores the user-entered name for an Other activity", async () => {
+    const repository = configuredRepository();
+
+    await repository.save({
+      ...result,
+      activity: "other",
+      activityName: "Pilates",
+      otherActivity: "Pilates"
+    }, "user-id");
+
+    expect(supabase.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activity: "other",
+        other_activity: "Pilates"
+      })
+    );
+  });
+
+  it("falls back to the existing activity column before the Other migration is applied", async () => {
+    supabase.insert
+      .mockResolvedValueOnce({
+        error: { message: "Could not find the 'other_activity' column of 'conversion_records' in the schema cache" }
+      })
+      .mockResolvedValueOnce({ error: null });
+    const repository = configuredRepository();
+
+    await repository.save({
+      ...result,
+      activity: "other",
+      activityName: "Pilates",
+      otherActivity: "Pilates"
+    }, "user-id");
+
+    expect(supabase.insert).toHaveBeenNthCalledWith(2, {
+      user_id: "user-id",
+      display_name: "Alex",
+      activity: "Pilates",
       intensity: "moderate",
       duration_minutes: 30,
       estimated_steps: 4500
@@ -87,6 +138,43 @@ describe("conversion repository", () => {
     expect(entries).toEqual([
       { rank: 1, displayName: "Sam", totalSteps: 12345, activityCount: 4 }
     ]);
+  });
+
+  it("lists only the requested user's latest submitted activities", async () => {
+    supabase.limit.mockResolvedValueOnce({
+      data: [{
+        id: "record-id",
+        activity: "other",
+        other_activity: "Pilates",
+        intensity: "moderate",
+        duration_minutes: 30,
+        estimated_steps: 3900,
+        created_at: "2026-09-09T10:30:00.000Z"
+      }],
+      error: null
+    });
+
+    const activities = await configuredRepository().listForUser("user-id");
+
+    expect(supabase.eq).toHaveBeenCalledWith("user_id", "user-id");
+    expect(supabase.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(supabase.limit).toHaveBeenCalledWith(50);
+    expect(activities).toEqual([{
+      id: "record-id",
+      activityName: "Pilates",
+      intensity: "moderate",
+      durationMinutes: 30,
+      estimatedSteps: 3900,
+      createdAt: "2026-09-09T10:30:00.000Z"
+    }]);
+  });
+
+  it("filters another user's activity history by display name", async () => {
+    await configuredRepository().listForDisplayName("Morgan");
+
+    expect(supabase.eq).toHaveBeenCalledWith("display_name", "Morgan");
+    expect(supabase.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(supabase.limit).toHaveBeenCalledWith(50);
   });
 
   it("surfaces Supabase write and read errors", async () => {

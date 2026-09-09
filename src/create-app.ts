@@ -23,14 +23,18 @@ import {
 } from "./domain/conversion.js";
 import {
   activitySchema,
+  changePasswordSchema,
   displayNameSchema,
   durationSchema,
   emailSchema,
   intensitySchema,
-  passwordSchema
+  passwordSchema,
+  signInPasswordSchema
 } from "./domain/validation.js";
 import {
   createAuthenticationService,
+  DisplayNameTakenError,
+  IncorrectPasswordError,
   type AuthenticationService
 } from "./persistence/authentication.js";
 import {
@@ -40,6 +44,7 @@ import {
 
 interface JourneySession {
   activity?: ActivityId;
+  otherActivity?: string;
   intensity?: Intensity;
   durationMinutes?: number;
   result?: ConversionResult;
@@ -92,12 +97,29 @@ function requireJourneyValue(
   return true;
 }
 
+function selectedActivityName(session: JourneySession) {
+  if (session.activity === "other" && session.otherActivity) return session.otherActivity;
+  return getActivity(session.activity!).name;
+}
+
 function normaliseEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
 function isAllowedEmail(email: string, allowedDomain: string) {
   return normaliseEmail(email).endsWith(`@${allowedDomain}`);
+}
+
+function renderInvalidCredentials(response: Response, email: string) {
+  const message = "Enter a valid email address and password";
+  return response.status(401).render("account/login", {
+    values: { email },
+    credentialError: message,
+    errors: [
+      { text: message, href: "#email" },
+      { text: message, href: "#password" }
+    ]
+  });
 }
 
 function isChangingAnswer(request: Request) {
@@ -195,8 +217,13 @@ export function createApp(
     response.locals.currentUser = journey(request).user;
     response.locals.currentSection = request.path === "/"
       ? "home"
-      : request.path.startsWith("/login") || request.path.startsWith("/signup")
+      : request.path.startsWith("/account")
+        || request.path.startsWith("/login")
+        || request.path.startsWith("/signup")
+        || request.path.startsWith("/request-access")
         ? "account"
+        : request.path.startsWith("/users/")
+          ? "scoreboard"
         : request.path.startsWith("/conversions")
           ? "conversions"
           : request.path.startsWith("/scoreboard")
@@ -219,7 +246,10 @@ export function createApp(
     if (!requireAuthenticatedUser(request, response)) return;
     response.render("journey/activity", {
       activities,
-      values: { activity: journey(request).activity },
+      values: {
+        activity: journey(request).activity,
+        otherActivity: journey(request).otherActivity
+      },
       backHref: "/",
       formAction: "/convert/activity"
     });
@@ -230,7 +260,10 @@ export function createApp(
 
     response.render("journey/activity", {
       activities,
-      values: { activity: journey(request).activity },
+      values: {
+        activity: journey(request).activity,
+        otherActivity: journey(request).otherActivity
+      },
       backHref: isChangingAnswer(request) ? "/convert/check" : "/convert",
       formAction: journeyUrl("/convert/activity", request)
     });
@@ -256,6 +289,9 @@ export function createApp(
     }
 
     journey(request).activity = parsed.data.activity;
+    journey(request).otherActivity = parsed.data.activity === "other"
+      ? parsed.data.otherActivity
+      : undefined;
     return response.redirect(303, isChangingAnswer(request) ? "/convert/check" : "/convert/intensity");
   });
 
@@ -265,7 +301,7 @@ export function createApp(
 
     response.render("journey/intensity", {
       intensities,
-      activityName: getActivity(journey(request).activity!).name,
+      activityName: selectedActivityName(journey(request)),
       values: { intensity: journey(request).intensity },
       backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/activity",
       formAction: journeyUrl("/convert/intensity", request)
@@ -286,7 +322,7 @@ export function createApp(
         request.body,
         {
           intensities,
-          activityName: getActivity(journey(request).activity!).name,
+          activityName: selectedActivityName(journey(request)),
           backHref: isChangingAnswer(request) ? "/convert/check" : "/convert/activity",
           formAction: journeyUrl("/convert/intensity", request)
         }
@@ -344,6 +380,7 @@ export function createApp(
     const result = convertActivityToSteps({
       displayName: user.displayName,
       activity: session.activity!,
+      otherActivity: session.otherActivity,
       intensity: session.intensity!,
       durationMinutes: session.durationMinutes!
     });
@@ -361,6 +398,7 @@ export function createApp(
     const result = convertActivityToSteps({
       displayName: user.displayName,
       activity: session.activity!,
+      otherActivity: session.otherActivity,
       intensity: session.intensity!,
       durationMinutes: session.durationMinutes!
     });
@@ -394,8 +432,86 @@ export function createApp(
     response.render("account/login");
   });
 
+  app.get("/account", (request, response) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+
+    response.render("account/details", { user });
+  });
+
+  app.get("/account/activities", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+
+    try {
+      const submittedActivities = (await repository.listForUser(user.id)).map((activity) => ({
+        ...activity,
+        submittedOn: new Intl.DateTimeFormat("en-GB", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC"
+        }).format(new Date(activity.createdAt))
+      }));
+      return response.render("account/activities", {
+        submittedActivities,
+        pageHeading: "Your submitted activities",
+        backHref: "/account",
+        emptyMessage: "You have not submitted any activities yet.",
+        showSubmitLink: true
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get("/account/change-password", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    response.render("account/change-password");
+  });
+
+  app.post("/account/change-password", async (request, response, next) => {
+    const user = requireAuthenticatedUser(request, response);
+    if (!user) return;
+    const parsed = changePasswordSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      return renderFieldError(
+        response,
+        "account/change-password",
+        parsed.error,
+        "currentPassword"
+      );
+    }
+
+    try {
+      await authentication.changePassword(
+        user.id,
+        user.email,
+        parsed.data.currentPassword,
+        parsed.data.newPassword
+      );
+      user.mustChangePassword = false;
+      return response.redirect(303, "/account/password-changed");
+    } catch (error) {
+      if (error instanceof IncorrectPasswordError) {
+        return response.status(400).render("account/change-password", {
+          errorMessage: error.message,
+          errorField: "currentPassword",
+          errors: [{ text: error.message, href: "#currentPassword" }]
+        });
+      }
+      return next(error);
+    }
+  });
+
+  app.get("/account/password-changed", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    response.render("account/password-changed");
+  });
+
   app.post("/login", async (request, response, next) => {
-    const parsed = emailSchema.and(passwordSchema).safeParse(request.body);
+    const parsed = emailSchema.and(signInPasswordSchema).safeParse(request.body);
 
     if (!parsed.success) {
       return renderFieldError(response, "account/login", parsed.error, "email", request.body);
@@ -403,11 +519,7 @@ export function createApp(
 
     const email = normaliseEmail(parsed.data.email);
     if (!isAllowedEmail(email, allowedEmailDomain)) {
-      return response.status(400).render("account/login", {
-        values: request.body,
-        errorMessage: `Enter an email address ending in @${allowedEmailDomain}`,
-        errors: [{ text: `Enter an email address ending in @${allowedEmailDomain}`, href: "#email" }]
-      });
+      return renderInvalidCredentials(response, email);
     }
 
     try {
@@ -418,12 +530,8 @@ export function createApp(
       if (user.status !== "approved") return response.status(403).render("account/access-unavailable");
       journey(request).user = user;
       return response.redirect(303, "/");
-    } catch (error) {
-      return response.status(401).render("account/login", {
-        values: { email },
-        errorMessage: error instanceof Error ? error.message : "Could not sign in",
-        errors: [{ text: error instanceof Error ? error.message : "Could not sign in", href: "#email" }]
-      });
+    } catch (_error) {
+      return renderInvalidCredentials(response, email);
     }
   });
 
@@ -438,12 +546,22 @@ export function createApp(
     if (!parsed.success) return renderFieldError(response, "account/request-access", parsed.error, "email", request.body);
     const email = normaliseEmail(parsed.data.email);
     if (!isAllowedEmail(email, allowedEmailDomain)) {
-      return response.status(400).render("account/request-access", { values: request.body, errorMessage: `Enter an email address ending in @${allowedEmailDomain}`, errors: [{ text: `Enter an email address ending in @${allowedEmailDomain}`, href: "#email" }] });
+      return response.render("account/access-requested");
     }
     try {
       await authentication.requestAccess(email, parsed.data.displayName, parsed.data.password);
       return response.render("account/access-requested");
-    } catch (error) { return next(error); }
+    } catch (error) {
+      if (error instanceof DisplayNameTakenError) {
+        return response.status(400).render("account/request-access", {
+          values: { displayName: parsed.data.displayName, email },
+          errorMessage: error.message,
+          errorField: "displayName",
+          errors: [{ text: error.message, href: "#displayName" }]
+        });
+      }
+      return next(error);
+    }
   });
 
   app.get("/admin/login", (_request, response) => response.render("account/admin-login"));
@@ -515,8 +633,39 @@ export function createApp(
     }).format(now);
 
     try {
-      const entries = await repository.listMonthly(monthStart);
+      const entries = (await repository.listMonthly(monthStart)).map((entry) => ({
+        ...entry,
+        activitiesHref: `/users/${encodeURIComponent(entry.displayName)}/activities`
+      }));
       return response.render("scoreboard", { entries, monthLabel });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get("/users/:displayName/activities", async (request, response, next) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    const parsed = displayNameSchema.safeParse({ displayName: request.params.displayName });
+    if (!parsed.success) return response.status(404).render("404");
+
+    try {
+      const submittedActivities = (await repository.listForDisplayName(parsed.data.displayName))
+        .map((activity) => ({
+          ...activity,
+          submittedOn: new Intl.DateTimeFormat("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            timeZone: "UTC"
+          }).format(new Date(activity.createdAt))
+        }));
+      return response.render("account/activities", {
+        submittedActivities,
+        pageHeading: `Activities submitted by ${parsed.data.displayName}`,
+        backHref: "/scoreboard",
+        emptyMessage: "This user has not submitted any activities yet.",
+        showSubmitLink: false
+      });
     } catch (error) {
       return next(error);
     }

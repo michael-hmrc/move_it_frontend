@@ -25,6 +25,11 @@ export const activities = [
     stepsPerMinute: { light: 90, moderate: 130, vigorous: 170 }
   },
   {
+    id: "other",
+    name: "Other",
+    stepsPerMinute: { light: 90, moderate: 130, vigorous: 170 }
+  },
+  {
     id: "rowing",
     name: "Rowing",
     stepsPerMinute: { light: 100, moderate: 150, vigorous: 200 }
