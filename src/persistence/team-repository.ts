@@ -43,6 +43,7 @@ export interface TeamScoreboardEntry {
   teamName: string;
   memberCount: number;
   totalSteps: number;
+  totalDurationMinutes: number;
   activityCount: number;
 }
 
@@ -190,6 +191,7 @@ class SupabaseTeamRepository implements TeamRepository {
       teamName: String(entry.team_name),
       memberCount: Number(entry.member_count),
       totalSteps: Number(entry.total_steps),
+      totalDurationMinutes: Number(entry.total_duration_minutes),
       activityCount: Number(entry.activity_count)
     }));
   }

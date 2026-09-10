@@ -26,6 +26,7 @@
             { html: teamLink },
             { text: entry.memberCount | string, format: "numeric" },
             { text: entry.totalSteps | string, format: "numeric" },
+            { text: entry.totalHours, format: "numeric" },
             { text: entry.activityCount | string, format: "numeric" }
           ]), rows) %}
         {% endfor %}
@@ -37,6 +38,7 @@
               { text: "Team" },
               { text: "Members", format: "numeric" },
               { text: "Estimated steps", format: "numeric" },
+              { text: "Total hours", format: "numeric" },
               { text: "Activities", format: "numeric" }
             ],
             rows: rows

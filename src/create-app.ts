@@ -585,8 +585,18 @@ export function createApp(
     }).format(now);
 
     try {
+      const entries = (await teams.listMonthlyScores(monthStart)).map((entry) => {
+        const hours = entry.totalDurationMinutes / 60;
+        const formattedHours = new Intl.NumberFormat("en-GB", {
+          maximumFractionDigits: 1
+        }).format(hours);
+        return {
+          ...entry,
+          totalHours: `${formattedHours} ${hours === 1 ? "hour" : "hours"}`
+        };
+      });
       return response.render("teams/scoreboard", {
-        entries: await teams.listMonthlyScores(monthStart),
+        entries,
         monthLabel
       });
     } catch (error) { return next(error); }

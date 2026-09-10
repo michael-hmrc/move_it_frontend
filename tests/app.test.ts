@@ -477,6 +477,7 @@ describe("Move It application", () => {
     expect(signedIn.text).toContain("Alex");
     expect(signedIn.text).toContain('href="/account"');
     expect(signedIn.text).toContain("Sign out");
+    expect(signedIn.text).toContain('class="app-service-account__sign-out" action="/logout"');
 
     const logout = await agent.post("/logout").type("form").send({});
     expect(logout.status).toBe(303);
@@ -701,6 +702,7 @@ describe("Move It application", () => {
           teamName: "Movers",
           memberCount: 3,
           totalSteps: 42000,
+          totalDurationMinutes: 150,
           activityCount: 8
         }
       ])
@@ -713,6 +715,8 @@ describe("Move It application", () => {
     expect(response.text).toContain("Monthly team scoreboard");
     expect(response.text).toContain("Movers");
     expect(response.text).toContain("42000");
+    expect(response.text).toContain("Total hours");
+    expect(response.text).toContain("2.5 hours");
     expect(response.text).toContain(`href="/teams/${teamId}"`);
     expect(teamRepository.listMonthlyScores).toHaveBeenCalledWith(
       expect.stringMatching(/^\d{4}-\d{2}-01$/)
