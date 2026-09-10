@@ -36,7 +36,9 @@
             { html: viewLink }
           ]), rows) %}
         {% endfor %}
-        {{ govukTable({ head: [{ text: "Team" }, { text: "Members" }, { text: "View" }], rows: rows }) }}
+        <div class="app-table-scroll" role="region" aria-label="Teams" tabindex="0">
+          {{ govukTable({ head: [{ text: "Team" }, { text: "Members" }, { text: "View" }], rows: rows }) }}
+        </div>
       {% else %}
         <p class="govuk-body">No teams have been created yet.</p>
       {% endif %}

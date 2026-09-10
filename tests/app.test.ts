@@ -664,6 +664,7 @@ describe("Move It application", () => {
     expect(response.text).toContain("Steppers");
     expect(response.text).toContain("5 of 5");
     expect(response.text).toContain('href="/scoreboard/teams"');
+    expect(response.text).toContain('class="app-table-scroll" role="region" aria-label="Teams" tabindex="0"');
     expect(response.text).toContain(`href="/teams/${teamId}"`);
     expect(response.text).toContain("View<span class=\"govuk-visually-hidden\"> Movers team members</span>");
     expect(response.text).not.toContain("@opencastsoftware.com");
