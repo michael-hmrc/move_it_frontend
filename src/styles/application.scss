@@ -283,6 +283,35 @@
   color: govuk-colour("red");
 }
 
+.app-scoreboard-cards {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.app-scoreboard-card {
+  border: 1px solid govuk-colour("black", $variant: "tint-80");
+  border-top: 5px solid #6e4ba2;
+  box-sizing: border-box;
+  height: calc(100% - #{govuk-spacing(6)});
+  margin-bottom: govuk-spacing(6);
+  padding: govuk-spacing(5);
+}
+
+.app-scoreboard-card .govuk-heading-m,
+.app-scoreboard-card .govuk-body {
+  margin-bottom: govuk-spacing(3);
+}
+
+@include govuk-media-query($until: tablet) {
+  .app-scoreboard-cards {
+    display: block;
+  }
+
+  .app-scoreboard-card {
+    height: auto;
+  }
+}
+
 @include govuk-media-query($until: tablet) {
   .app-table-scroll {
     -webkit-overflow-scrolling: touch;

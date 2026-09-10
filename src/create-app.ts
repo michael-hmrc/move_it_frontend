@@ -569,7 +569,12 @@ export function createApp(
     catch (error) { return next(error); }
   });
 
-  app.get("/teams/scoreboard", async (request, response, next) => {
+  app.get("/teams/scoreboard", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    return response.redirect(308, "/scoreboard/teams");
+  });
+
+  app.get("/scoreboard/teams", async (request, response, next) => {
     if (!requireAuthenticatedUser(request, response)) return;
     const now = new Date();
     const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
@@ -903,7 +908,12 @@ export function createApp(
     response.render("conversions", { conversionRows });
   });
 
-  app.get("/scoreboard", async (request, response, next) => {
+  app.get("/scoreboard", (request, response) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    return response.render("scoreboard-index");
+  });
+
+  app.get("/scoreboard/individual", async (request, response, next) => {
     if (!requireAuthenticatedUser(request, response)) return;
     const now = new Date();
     const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
@@ -943,7 +953,7 @@ export function createApp(
       return response.render("account/activities", {
         submittedActivities,
         pageHeading: `Activities submitted by ${parsed.data.displayName}`,
-        backHref: "/scoreboard",
+        backHref: "/scoreboard/individual",
         emptyMessage: "This user has not submitted any activities yet.",
         showSubmitLink: false
       });

@@ -332,6 +332,20 @@ describe("Move It application", () => {
     expect(response.headers.location).toBe("/login");
   });
 
+  it("shows individual and team scoreboard cards on the monthly scoreboard landing page", async () => {
+    const agent = request.agent(testApp());
+    await signIn(agent);
+
+    const response = await agent.get("/scoreboard");
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("Monthly scoreboard");
+    expect(response.text).toContain('href="/scoreboard/individual"');
+    expect(response.text).toContain("Individual scoreboard");
+    expect(response.text).toContain('href="/scoreboard/teams"');
+    expect(response.text).toContain("Team scoreboard");
+    expect(response.text).toContain('href="/scoreboard" aria-current="page"');
+  });
+
   it("renders the monthly scoreboard", async () => {
     const repository = repositoryWith({
       listMonthly: vi.fn().mockResolvedValue([
@@ -341,10 +355,10 @@ describe("Move It application", () => {
 
     const agent = request.agent(testApp(repository));
     await signIn(agent);
-    const response = await agent.get("/scoreboard");
+    const response = await agent.get("/scoreboard/individual");
 
     expect(response.status).toBe(200);
-    expect(response.text).toContain("Monthly scoreboard");
+    expect(response.text).toContain("Individual monthly scoreboard");
     expect(response.text).toContain("Morgan");
     expect(response.text).toContain("8400");
     expect(response.text).toContain('href="/users/Morgan/activities"');
@@ -376,7 +390,7 @@ describe("Move It application", () => {
     expect(response.text).toContain("Vigorous");
     expect(response.text).toContain("20 minutes");
     expect(response.text).toContain("4600");
-    expect(response.text).toContain('href="/scoreboard"');
+    expect(response.text).toContain('href="/scoreboard/individual"');
   });
 
   it("requires sign-in to view another user's activities", async () => {
@@ -389,7 +403,7 @@ describe("Move It application", () => {
   it("renders an empty scoreboard when there are no saved entries", async () => {
     const agent = request.agent(testApp());
     await signIn(agent);
-    const response = await agent.get("/scoreboard");
+    const response = await agent.get("/scoreboard/individual");
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("There are no recorded activities this month yet.");
@@ -637,7 +651,7 @@ describe("Move It application", () => {
     expect(response.text).toContain("3 of 5");
     expect(response.text).toContain("Steppers");
     expect(response.text).toContain("5 of 5");
-    expect(response.text).toContain('href="/teams/scoreboard"');
+    expect(response.text).toContain('href="/scoreboard/teams"');
     expect(response.text).toContain(`href="/teams/${teamId}"`);
     expect(response.text).toContain("View<span class=\"govuk-visually-hidden\"> Movers team members</span>");
     expect(response.text).not.toContain("@opencastsoftware.com");
@@ -681,7 +695,7 @@ describe("Move It application", () => {
     const agent = request.agent(testApp(repositoryWith(), teamRepository));
     await signIn(agent);
 
-    const response = await agent.get("/teams/scoreboard");
+    const response = await agent.get("/scoreboard/teams");
     expect(response.status).toBe(200);
     expect(response.text).toContain("Monthly team scoreboard");
     expect(response.text).toContain("Movers");
@@ -702,7 +716,7 @@ describe("Move It application", () => {
     expect(teamResponse.status).toBe(303);
     expect(teamResponse.headers.location).toBe("/login");
 
-    const scoreboardResponse = await request(testApp()).get("/teams/scoreboard");
+    const scoreboardResponse = await request(testApp()).get("/scoreboard/teams");
     expect(scoreboardResponse.status).toBe(303);
     expect(scoreboardResponse.headers.location).toBe("/login");
   });

@@ -1,0 +1,32 @@
+{% extends "layouts/main.njk" %}
+
+{% set pageTitle = "Monthly scoreboard - Move It" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h1 class="govuk-heading-xl">Monthly scoreboard</h1>
+      <p class="govuk-body-l">Choose a scoreboard to view the current month's estimated steps.</p>
+
+      <div class="govuk-grid-row app-scoreboard-cards">
+        <div class="govuk-grid-column-one-half">
+          <section class="app-scoreboard-card">
+            <h2 class="govuk-heading-m">
+              <a class="govuk-link govuk-link--no-visited-state" href="/scoreboard/individual">Individual scoreboard</a>
+            </h2>
+            <p class="govuk-body">See individual participants ranked by their total estimated steps.</p>
+          </section>
+        </div>
+
+        <div class="govuk-grid-column-one-half">
+          <section class="app-scoreboard-card">
+            <h2 class="govuk-heading-m">
+              <a class="govuk-link govuk-link--no-visited-state" href="/scoreboard/teams">Team scoreboard</a>
+            </h2>
+            <p class="govuk-body">See teams ranked by their current members' combined estimated steps.</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
