@@ -136,6 +136,12 @@ function normaliseEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+function formatHours(totalMinutes: number) {
+  const hours = totalMinutes / 60;
+  const value = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(hours);
+  return `${value} ${hours === 1 ? "hour" : "hours"}`;
+}
+
 function isAllowedEmail(email: string, allowedDomain: string) {
   return normaliseEmail(email).endsWith(`@${allowedDomain}`);
 }
@@ -586,13 +592,9 @@ export function createApp(
 
     try {
       const entries = (await teams.listMonthlyScores(monthStart)).map((entry) => {
-        const hours = entry.totalDurationMinutes / 60;
-        const formattedHours = new Intl.NumberFormat("en-GB", {
-          maximumFractionDigits: 1
-        }).format(hours);
         return {
           ...entry,
-          totalHours: `${formattedHours} ${hours === 1 ? "hour" : "hours"}`
+          totalHours: formatHours(entry.totalDurationMinutes)
         };
       });
       return response.render("teams/scoreboard", {
@@ -936,6 +938,7 @@ export function createApp(
     try {
       const entries = (await repository.listMonthly(monthStart)).map((entry) => ({
         ...entry,
+        profileHref: `/users/${encodeURIComponent(entry.displayName)}`,
         activitiesHref: `/users/${encodeURIComponent(entry.displayName)}/activities`
       }));
       return response.render("scoreboard", { entries, monthLabel });
@@ -963,13 +966,34 @@ export function createApp(
       return response.render("account/activities", {
         submittedActivities,
         pageHeading: `Activities submitted by ${parsed.data.displayName}`,
-        backHref: "/scoreboard/individual",
+        backHref: request.query.from === "profile"
+          ? `/users/${encodeURIComponent(parsed.data.displayName)}`
+          : "/scoreboard/individual",
         emptyMessage: "This user has not submitted any activities yet.",
         showSubmitLink: false
       });
     } catch (error) {
       return next(error);
     }
+  });
+
+  app.get("/users/:displayName", async (request, response, next) => {
+    if (!requireAuthenticatedUser(request, response)) return;
+    const parsed = displayNameSchema.safeParse({ displayName: request.params.displayName });
+    if (!parsed.success) return response.status(404).render("404");
+
+    try {
+      const profile = await repository.findUserProfile(parsed.data.displayName);
+      if (!profile) return response.status(404).render("404");
+      return response.render("users/show", {
+        profile: {
+          ...profile,
+          totalExerciseTime: formatHours(profile.totalDurationMinutes),
+          formattedTotalSteps: new Intl.NumberFormat("en-GB").format(profile.totalSteps),
+          activitiesHref: `/users/${encodeURIComponent(profile.displayName)}/activities?from=profile`
+        }
+      });
+    } catch (error) { return next(error); }
   });
 
   app.use((_request, response) => {

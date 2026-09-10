@@ -15,12 +15,13 @@
       <h1 class="govuk-heading-xl">Individual monthly scoreboard</h1>
 
       {{ govukInsetText({
-        text: "The scoreboard uses estimated step equivalents and resets at the beginning of each calendar month."
+        text: "The scoreboard includes all approved users, uses estimated step equivalents and resets at the beginning of each calendar month."
       }) }}
 
       {% if entries.length %}
         {% set rows = [] %}
         {% for entry in entries %}
+          {% set profileLink %}<a class="govuk-link" href="{{ entry.profileHref }}">{{ entry.displayName }}</a>{% endset %}
           {% set activityCountLink %}
             <a class="govuk-link" href="{{ entry.activitiesHref }}">
               View<span class="govuk-visually-hidden"> activities submitted by {{ entry.displayName }}</span>
@@ -28,7 +29,7 @@
           {% endset %}
           {% set rows = (rows.push([
             { text: entry.rank, format: "numeric" },
-            { text: entry.displayName },
+            { html: profileLink },
             { text: entry.totalSteps | string, format: "numeric" },
             { html: activityCountLink, format: "numeric" }
           ]), rows) %}

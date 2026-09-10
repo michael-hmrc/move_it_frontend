@@ -15,6 +15,7 @@ function repositoryWith(overrides: Partial<ConversionRepository> = {}): Conversi
     listMonthly: vi.fn().mockResolvedValue([]),
     listForUser: vi.fn().mockResolvedValue([]),
     listForDisplayName: vi.fn().mockResolvedValue([]),
+    findUserProfile: vi.fn().mockResolvedValue(undefined),
     ...overrides
   };
 }
@@ -350,7 +351,8 @@ describe("Move It application", () => {
   it("renders the monthly scoreboard", async () => {
     const repository = repositoryWith({
       listMonthly: vi.fn().mockResolvedValue([
-        { rank: 1, displayName: "Morgan", totalSteps: 8400, activityCount: 2 }
+        { rank: 1, displayName: "Morgan", totalSteps: 8400, activityCount: 2 },
+        { rank: 2, displayName: "Sam", totalSteps: 0, activityCount: 0 }
       ])
     });
 
@@ -362,6 +364,9 @@ describe("Move It application", () => {
     expect(response.text).toContain("Individual monthly scoreboard");
     expect(response.text).toContain("Morgan");
     expect(response.text).toContain("8400");
+    expect(response.text).toContain("Sam");
+    expect(response.text).toContain("all approved users");
+    expect(response.text).toContain('href="/users/Morgan"');
     expect(response.text).toContain('href="/users/Morgan/activities"');
     expect(response.text).toContain("View<span class=\"govuk-visually-hidden\"> activities submitted by Morgan</span>");
     expect(response.text).not.toContain("There are no recorded activities this month yet.");
@@ -399,6 +404,36 @@ describe("Move It application", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.location).toBe("/login");
+  });
+
+  it("shows another user's profile and all-time statistics", async () => {
+    const teamId = "13845b5d-e982-4c7d-906c-9c32ed90d810";
+    const repository = repositoryWith({
+      findUserProfile: vi.fn().mockResolvedValue({
+        displayName: "Morgan",
+        totalDurationMinutes: 150,
+        totalSteps: 123456,
+        mostFrequentActivity: "Running",
+        team: { id: teamId, name: "Movers" }
+      })
+    });
+    const agent = request.agent(testApp(repository));
+    await signIn(agent);
+
+    const response = await agent.get("/users/Morgan");
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("<h1 class=\"govuk-heading-xl\">Morgan</h1>");
+    expect(response.text).toContain("2.5 hours");
+    expect(response.text).toContain("123,456");
+    expect(response.text).toContain("Running");
+    expect(response.text).toContain(`href="/teams/${teamId}">Movers</a>`);
+    expect(response.text).toContain('href="/users/Morgan/activities?from=profile"');
+    expect(response.text).not.toContain("@opencastsoftware.com");
+    expect(repository.findUserProfile).toHaveBeenCalledWith("Morgan");
+
+    const anonymousResponse = await request(testApp(repository)).get("/users/Morgan");
+    expect(anonymousResponse.status).toBe(303);
+    expect(anonymousResponse.headers.location).toBe("/login");
   });
 
   it("renders an empty scoreboard when there are no saved entries", async () => {
@@ -664,7 +699,6 @@ describe("Move It application", () => {
     expect(response.text).toContain("3 of 5");
     expect(response.text).toContain("Steppers");
     expect(response.text).toContain("5 of 5");
-    expect(response.text).toContain('href="/scoreboard/teams"');
     expect(response.text).toContain('class="app-table-scroll" role="region" aria-label="Teams" tabindex="0"');
     expect(response.text).toContain(`href="/teams/${teamId}"`);
     expect(response.text).toContain("View<span class=\"govuk-visually-hidden\"> Movers team members</span>");

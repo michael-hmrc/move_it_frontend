@@ -1,0 +1,42 @@
+{% extends "layouts/main.njk" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% set pageTitle = profile.displayName + " - Move It" %}
+{% block beforeContent %}{{ govukBackLink({ href: "/scoreboard/individual", text: "Back" }) }}{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <span class="govuk-caption-xl">Participant</span>
+      <h1 class="govuk-heading-xl">{{ profile.displayName }}</h1>
+
+      <dl class="govuk-summary-list">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Total exercise time</dt>
+          <dd class="govuk-summary-list__value">{{ profile.totalExerciseTime }}</dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Total estimated steps</dt>
+          <dd class="govuk-summary-list__value">{{ profile.formattedTotalSteps }}</dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Most frequent activity</dt>
+          <dd class="govuk-summary-list__value">{{ profile.mostFrequentActivity or "No activities submitted yet" }}</dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Team</dt>
+          <dd class="govuk-summary-list__value">
+            {% if profile.team %}
+              <a class="govuk-link" href="/teams/{{ profile.team.id }}">{{ profile.team.name }}</a>
+            {% else %}
+              Not currently in a team
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+
+      <p class="govuk-body"><a class="govuk-link" href="{{ profile.activitiesHref }}">View submitted activities</a></p>
+    </div>
+  </div>
+{% endblock %}

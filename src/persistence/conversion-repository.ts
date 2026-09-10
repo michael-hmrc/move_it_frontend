@@ -7,6 +7,7 @@ export interface ConversionRepository {
   listMonthly(monthStart: string): Promise<ScoreboardEntry[]>;
   listForUser(userId: string): Promise<SubmittedActivity[]>;
   listForDisplayName(displayName: string): Promise<SubmittedActivity[]>;
+  findUserProfile(displayName: string): Promise<UserProfile | undefined>;
 }
 
 export interface ScoreboardEntry {
@@ -25,6 +26,17 @@ export interface SubmittedActivity {
   createdAt: string;
 }
 
+export interface UserProfile {
+  displayName: string;
+  totalDurationMinutes: number;
+  totalSteps: number;
+  mostFrequentActivity?: string;
+  team?: {
+    id: string;
+    name: string;
+  };
+}
+
 class NoopConversionRepository implements ConversionRepository {
   async save(): Promise<void> {}
 
@@ -38,6 +50,10 @@ class NoopConversionRepository implements ConversionRepository {
 
   async listForDisplayName(): Promise<SubmittedActivity[]> {
     return [];
+  }
+
+  async findUserProfile(): Promise<UserProfile | undefined> {
+    return undefined;
   }
 }
 
@@ -101,6 +117,32 @@ class SupabaseConversionRepository implements ConversionRepository {
 
   async listForDisplayName(displayName: string): Promise<SubmittedActivity[]> {
     return this.listWhere("display_name", displayName);
+  }
+
+  async findUserProfile(displayName: string): Promise<UserProfile | undefined> {
+    const { data, error } = await this.client.rpc("move_it_user_profile", {
+      requested_display_name: displayName
+    });
+    if (error) throw new Error(`Could not load user profile: ${error.message}`);
+
+    const entry = (data ?? [])[0] as Record<string, unknown> | undefined;
+    if (!entry) return undefined;
+
+    const activity = typeof entry.most_frequent_activity === "string"
+      ? entry.most_frequent_activity
+      : undefined;
+    const teamId = typeof entry.team_id === "string" ? entry.team_id : undefined;
+    const teamName = typeof entry.team_name === "string" ? entry.team_name : undefined;
+
+    return {
+      displayName: String(entry.display_name),
+      totalDurationMinutes: Number(entry.total_duration_minutes),
+      totalSteps: Number(entry.total_steps),
+      mostFrequentActivity: activity
+        ? isActivityId(activity) ? getActivity(activity).name : activity
+        : undefined,
+      team: teamId && teamName ? { id: teamId, name: teamName } : undefined
+    };
   }
 
   private async listWhere(

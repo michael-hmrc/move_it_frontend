@@ -49,6 +49,7 @@ describe("conversion repository", () => {
     await expect(repository.listMonthly("2026-08-01")).resolves.toEqual([]);
     await expect(repository.listForUser("user-id")).resolves.toEqual([]);
     await expect(repository.listForDisplayName("Alex")).resolves.toEqual([]);
+    await expect(repository.findUserProfile("Alex")).resolves.toBeUndefined();
     expect(createClient).not.toHaveBeenCalled();
   });
 
@@ -138,6 +139,34 @@ describe("conversion repository", () => {
     expect(entries).toEqual([
       { rank: 1, displayName: "Sam", totalSteps: 12345, activityCount: 4 }
     ]);
+  });
+
+  it("maps another user's all-time profile without exposing their email", async () => {
+    supabase.rpc.mockResolvedValue({
+      data: [{
+        display_name: "Morgan",
+        total_duration_minutes: "150",
+        total_steps: "123456",
+        most_frequent_activity: "running",
+        team_id: "team-id",
+        team_name: "Movers"
+      }],
+      error: null
+    });
+
+    const profile = await configuredRepository().findUserProfile("Morgan");
+
+    expect(supabase.rpc).toHaveBeenCalledWith("move_it_user_profile", {
+      requested_display_name: "Morgan"
+    });
+    expect(profile).toEqual({
+      displayName: "Morgan",
+      totalDurationMinutes: 150,
+      totalSteps: 123456,
+      mostFrequentActivity: "Running",
+      team: { id: "team-id", name: "Movers" }
+    });
+    expect(profile).not.toHaveProperty("email");
   });
 
   it("lists only the requested user's latest submitted activities", async () => {
