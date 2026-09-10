@@ -40,7 +40,13 @@
           }) }}
           {{ govukButton({ text: "Sign in" }) }}
       </form>
-      <p class="govuk-body"><a class="govuk-link" href="/request-access">Request access</a></p>
+
+      <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+      <h2 class="govuk-heading-m">Do you need access?</h2>
+      <p class="govuk-body">
+        If you do not already have an account, you can <a class="govuk-link" href="/request-access">request access</a>.
+        An administrator will review your request.
+      </p>
     </div>
   </div>
 {% endblock %}

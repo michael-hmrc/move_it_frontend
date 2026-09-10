@@ -1,6 +1,9 @@
 {% extends "layouts/main.njk" %}
 
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
 {% set pageTitle = "Monthly scoreboard - Move It" %}
+{% block beforeContent %}{{ govukBackLink({ href: "/", text: "Back" }) }}{% endblock %}
 
 {% block content %}
   <div class="govuk-grid-row">

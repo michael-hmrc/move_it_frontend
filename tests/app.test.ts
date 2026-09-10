@@ -343,6 +343,7 @@ describe("Move It application", () => {
     expect(response.text).toContain("Individual scoreboard");
     expect(response.text).toContain('href="/scoreboard/teams"');
     expect(response.text).toContain("Team scoreboard");
+    expect(response.text).toContain('href="/" class="govuk-back-link"');
     expect(response.text).toContain('href="/scoreboard" aria-current="page"');
   });
 
@@ -417,6 +418,13 @@ describe("Move It application", () => {
     expect(response.status).toBe(200);
     expect(response.text).toContain("How Move It works");
     expect(response.text).toContain("illustrative estimates");
+    expect(response.text).toContain("Getting access");
+    expect(response.text).toContain("Submitting an activity");
+    expect(response.text).toContain("Monthly scoreboards");
+    expect(response.text).toContain("A team can have up to 5 members");
+    expect(response.text).toContain("join an existing team directly");
+    expect(response.text).toContain('href="/scoreboard"');
+    expect(response.text).toContain('href="/teams"');
     expect(response.text).toContain('href="/about">How it works</a>');
   });
 
@@ -432,6 +440,7 @@ describe("Move It application", () => {
     expect(response.text).toContain("Walking");
     expect(response.text).toContain("9000");
     expect(response.text).toContain("12000");
+    expect(response.text).toContain('href="/" class="govuk-back-link"');
     expect(response.text).toContain('aria-current="page"');
   });
 
@@ -441,7 +450,9 @@ describe("Move It application", () => {
 
     expect(login.status).toBe(200);
     expect(login.text).toContain("Sign in");
-    expect(login.text).toContain("Request access");
+    expect(login.text).toContain("Do you need access?");
+    expect(login.text).toContain('href="/request-access">request access</a>');
+    expect(login.text).toContain("An administrator will review your request.");
     expect(login.text).toContain('data-module="govuk-password-input"');
     expect(login.text).toContain('aria-controls="password"');
     expect(login.text).toContain('aria-label="Show password"');
@@ -503,6 +514,7 @@ describe("Move It application", () => {
     expect(page.text).toContain("Create a team");
     expect(page.text).toContain('href="/teams/create"');
     expect(page.text).not.toContain('action="/teams/create"');
+    expect(page.text).toContain('href="/" class="govuk-back-link"');
     expect(page.text).toContain('href="/teams" aria-current="page"');
 
     const createPage = await agent.get("/teams/create");

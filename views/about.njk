@@ -10,22 +10,43 @@
     <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-xl">How Move It works</h1>
 
-      <p class="govuk-body-l"><strong>Move It</strong> converts exercise activities into an estimated number of steps.</p>
+      <p class="govuk-body-l"><strong>Move It</strong> is a monthly activity challenge. It converts exercise activities into estimated steps so individuals and teams can take part together.</p>
 
-      <h2 class="govuk-heading-m">What you will need</h2>
-      <p class="govuk-body">You will be asked for:</p>
+      <h2 class="govuk-heading-m">Getting access</h2>
+      <p class="govuk-body">You need an approved account to use Move It. If you do not have an account, request access from the sign-in page. An administrator will review your request.</p>
+      <p class="govuk-body">Your display name must be unique. It is used on scoreboards, activity lists and team pages.</p>
+      <p class="govuk-body">From your account page you can view your account details, see your latest 50 submissions and change your password.</p>
+
+      <h2 class="govuk-heading-m">Submitting an activity</h2>
+      <p class="govuk-body">For each activity, you will be asked for:</p>
       <ul class="govuk-list govuk-list--bullet">
-        <li>the activity you completed</li>
-        <li>the intensity of the activity</li>
+        <li>the activity you completed, or a description if you choose Other</li>
+        <li>the intensity, which you declare yourself</li>
         <li>the duration in minutes</li>
       </ul>
+      <p class="govuk-body">Move It uses this information to calculate an estimated step equivalent. You can compare the rates in the <a class="govuk-link" href="/conversions">conversion guide</a>.</p>
 
       {{ govukInsetText({
         text: "Step equivalents are illustrative estimates and are not medical measurements."
       }) }}
 
-      <h2 class="govuk-heading-m">Monthly scoreboard</h2>
-      <p class="govuk-body">Completed activities are added to the current month's scoreboard. It ranks display names by their total estimated steps.</p>
+      <h2 class="govuk-heading-m">Monthly scoreboards</h2>
+      <p class="govuk-body">Scoreboards reset at the beginning of each calendar month. You can view:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>the individual scoreboard, which ranks participants by their total estimated steps</li>
+        <li>the team scoreboard, which combines the estimated steps submitted by each team's current members</li>
+      </ul>
+      <p class="govuk-body">Signed-in users can use the individual scoreboard to view another participant's submitted activities.</p>
+      <p class="govuk-body">If you change teams, your submissions for the current month count towards your new team's score.</p>
+
+      <h2 class="govuk-heading-m">Teams</h2>
+      <p class="govuk-body">A team can have up to 5 members, and each person can belong to one team at a time.</p>
+      <p class="govuk-body">You can create a team, join an existing team directly, or accept an invitation from a team member. Any member can invite someone, leave the team or disband it.</p>
+      <p class="govuk-body">Signed-in users can view team names and members' display names. Pending invitations and email addresses are not shown in the team directory or member pages.</p>
+      <p class="govuk-body">Leaving or disbanding a team does not delete user accounts or submitted activities.</p>
+
+      <p class="govuk-body"><a class="govuk-link" href="/scoreboard">View the monthly scoreboards</a></p>
+      <p class="govuk-body"><a class="govuk-link" href="/teams">View teams</a></p>
 
       {{ govukButton({
         text: "Submit an activity",
