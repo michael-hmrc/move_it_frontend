@@ -125,6 +125,8 @@ describe("Move It application", () => {
 
     expect(response.status).toBe(200);
     expect(response.text).toContain("What activity did you do?");
+    expect(response.text).toContain("Choose the activity that most closely matches what you did.");
+    expect(response.text).toContain("If you select Other, you must enter the activity.");
     expect(response.text).toContain('src="/images/opencast-logo.png"');
     expect(response.text).toContain('alt="Opencast"');
     expect(response.text).toContain('class="app-header__brand-stripe"');
@@ -431,6 +433,10 @@ describe("Move It application", () => {
     expect(response.text).not.toContain("@opencastsoftware.com");
     expect(repository.findUserProfile).toHaveBeenCalledWith("Morgan");
 
+    const teamProfile = await agent.get(`/users/Morgan?team=${teamId}`);
+    expect(teamProfile.status).toBe(200);
+    expect(teamProfile.text).toContain(`href="/teams/${teamId}" class="govuk-back-link"`);
+
     const anonymousResponse = await request(testApp(repository)).get("/users/Morgan");
     expect(anonymousResponse.status).toBe(303);
     expect(anonymousResponse.headers.location).toBe("/login");
@@ -610,6 +616,8 @@ describe("Move It application", () => {
     const teamPage = await agent.get(`/teams/${teamId}`);
     expect(teamPage.text).toContain('href="/teams/manage"');
     expect(teamPage.text).not.toContain(`action="/teams/${teamId}/join"`);
+    expect(teamPage.text).toContain(`href="/users/Alex?team=${teamId}"`);
+    expect(teamPage.text).toContain(`href="/users/Sam?team=${teamId}"`);
 
     const createPage = await agent.get("/teams/create");
     expect(createPage.status).toBe(303);

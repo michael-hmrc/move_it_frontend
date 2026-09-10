@@ -27,7 +27,8 @@
       {% if team.members.length %}
         {% set rows = [] %}
         {% for member in team.members %}
-          {% set rows = (rows.push([{ text: member.displayName }]), rows) %}
+          {% set memberLink %}<a class="govuk-link" href="{{ member.profileHref }}">{{ member.displayName }}</a>{% endset %}
+          {% set rows = (rows.push([{ html: memberLink }]), rows) %}
         {% endfor %}
         {{ govukTable({ head: [{ text: "Member" }], rows: rows }) }}
       {% else %}

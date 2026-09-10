@@ -748,7 +748,13 @@ export function createApp(
       ]);
       if (!team) return response.status(404).render("404");
       return response.render("teams/show", {
-        team,
+        team: {
+          ...team,
+          members: team.members.map((member) => ({
+            ...member,
+            profileHref: `/users/${encodeURIComponent(member.displayName)}?team=${team.id}`
+          }))
+        },
         canJoin: !overview.team && team.members.length < 5,
         isCurrentTeam: overview.team?.id === team.id
       });
@@ -985,7 +991,12 @@ export function createApp(
     try {
       const profile = await repository.findUserProfile(parsed.data.displayName);
       if (!profile) return response.status(404).render("404");
+      const teamId = typeof request.query.team === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(request.query.team)
+        ? request.query.team
+        : undefined;
       return response.render("users/show", {
+        backHref: teamId ? `/teams/${teamId}` : "/scoreboard/individual",
         profile: {
           ...profile,
           totalExerciseTime: formatHours(profile.totalDurationMinutes),
