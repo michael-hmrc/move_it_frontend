@@ -5,10 +5,6 @@ activities into illustrative step equivalents and ranks both individuals and
 teams on monthly scoreboards. It uses server-rendered, progressively enhanced
 forms based on GOV.UK Design System conventions without GOV.UK branding.
 
-The service header uses the official black Opencast logo on an Opencast lime
-background with a purple accent. The logo asset is stored locally so rendering
-does not depend on a third-party image request.
-
 Approved users submit an activity through a one-question-per-page journey:
 activity, intensity and duration, followed by a check-answers page. Journey
 answers and the signed-in user are retained for 30 minutes in a signed,
